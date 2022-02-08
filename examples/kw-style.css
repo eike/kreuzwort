@@ -1,0 +1,83 @@
+:root {
+    --cell-size: 30px;
+    --cell-width: var(--cell-size);
+    --cell-height: var(--cell-size);
+}
+
+kw-clue {
+    width: 500px;
+}
+
+kw-clue:focus {
+    background-color: orange;
+}
+
+kw-grid {
+    display: table;
+    border-collapse: collapse;
+    border: 3px solid black;
+}
+
+kw-row {
+    display: table-row;
+}
+
+kw-c, kw-b {
+    display: table-cell;
+    position: relative;
+    /* border: 1px solid black; */
+    width: var(--cell-width);
+    height: var(--cell-height);
+    font: 18px Avenir, sans-serif;
+    text-align: center;
+    vertical-align: middle;
+}
+
+kw-b {
+    display: table-cell;
+    background-color: black;
+}
+
+kw-c[number]:empty::before {
+    content: attr(number);
+    position: absolute;
+    left: 2px;
+    top: 0px;
+    font: 12px Avenir, sans-serif;
+    color: lightgray;
+}
+
+kw-clue {
+    display: block;
+    padding-left: 30px;
+}
+
+kw-clue::before {
+    display: inline-block;
+    width: 25px;
+    position: absolute;
+    left: 0px;
+    content: attr(light-start) " ";
+    text-align: right;
+    font-weight: bold;
+}
+
+kw-grid.barred {
+    border: none;
+}
+
+kw-grid.barred kw-c {
+    border: 1px solid black;
+}
+
+kw-grid.barred kw-c[across] {   
+    border-left: 3px solid black;
+}
+
+kw-grid.barred kw-c[down] {
+    border-top: 3px solid black;
+}
+
+kw-grid.barred kw-b {
+    background: none;
+}
