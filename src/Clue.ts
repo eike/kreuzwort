@@ -11,18 +11,17 @@ class Clue extends HTMLElement {
             input { opacity: 0; position: absolute; left: -100px; }
             div.light { float: right; display: table-row; border-collapse: collapse; }
             div.light > span { display: table-cell; border: 1px solid black; width: 18px; height: 18px; font: 14px/16px Avenir, sans-serif; text-align: center; background-color: white; }
-            div.clear { clear: right; height: 0; }
+            div.clear { cursor: pointer; }
+            div.clear::after { content: ''; clear: right; display: block; height: 0; }
             `;
         shadow.appendChild(style);
-        shadow.appendChild(document.createElement('slot'));
+        let clearDiv = document.createElement('div');
+        clearDiv.appendChild(document.createElement('slot'));
         this.input = document.createElement('input');
-        shadow.appendChild(this.input);
-        
+        clearDiv.appendChild(this.input);
         this.lightDiv = document.createElement('div');
         this.lightDiv.className = 'light';
-        shadow.appendChild(this.lightDiv);
-
-        let clearDiv = document.createElement('div');
+        clearDiv.appendChild(this.lightDiv);
         clearDiv.className = "clear";
         shadow.appendChild(clearDiv);
     }
