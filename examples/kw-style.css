@@ -28,6 +28,8 @@ kw-c, kw-b {
     /* border: 1px solid black; */
     width: var(--cell-width);
     height: var(--cell-height);
+    max-width: var(--cell-width);
+    max-height: var(--cell-height);
     font: 18px Avenir, sans-serif;
     text-align: center;
     vertical-align: middle;
@@ -38,13 +40,14 @@ kw-b {
     background-color: black;
 }
 
-kw-c[number]:empty::before {
+kw-c[number]::before {
     content: attr(number);
     position: absolute;
     left: 2px;
     top: 0px;
     font: 12px Avenir, sans-serif;
-    color: lightgray;
+    color: gray;
+    z-index: -1;
 }
 
 kw-clue {
@@ -64,18 +67,49 @@ kw-clue::before {
 
 kw-grid.barred {
     border: none;
+    --cell-width: 36px;
+    --cell-height: 36px;
 }
 
 kw-grid.barred kw-c {
-    border: 1px solid black;
+    box-shadow:
+        1px 0 0 0 black, 
+        0 1px 0 0 black, 
+        1px 1px 0 0 black, 
+        1px 0 0 0 black inset, 
+        0 1px 0 0 black inset;
+}
+
+kw-grid.barred kw-c[number]::before {
+    top: 2px;
+    left: 4px;
 }
 
 kw-grid.barred kw-c[across] {   
-    border-left: 3px solid black;
+    box-shadow:
+        1px 0 0 0 black, 
+        0 1px 0 0 black, 
+        1px 1px 0 0 black, 
+        inset 3px 0 0 0 black, 
+        inset 0 1px 0 0 black;
 }
 
 kw-grid.barred kw-c[down] {
-    border-top: 3px solid black;
+    box-shadow:
+        1px 0 0 0 black, 
+        0 1px 0 0 black, 
+        1px 1px 0 0 black, 
+        1px 0 0 0 black inset, 
+        0 3px 0 0 black inset;
+}
+
+kw-grid.barred kw-c[across][down] {
+    box-shadow:
+        1px 0 0 0 black, 
+        0 1px 0 0 black, 
+        1px 1px 0 0 black, 
+        3px 0 0 0 black inset, 
+        0 3px 0 0 black inset;
 }
 
 kw-grid.barred kw-b {

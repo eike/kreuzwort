@@ -1,8 +1,17 @@
+enum CellHighlight {
+    None,
+    CurrentWord,
+    CursorBefore,
+    CursorAfter,
+}
+
 type CellEvents = {
-    contentChanged : string
+    contentChanged : string;
+    highlightChanged : CellHighlight;
 }
 class CellInfo implements Emitter<CellEvents> {
     _contents : string = "";
+    #highlight : CellHighlight = CellHighlight.None;
 
     get contents() { return this._contents; }
     set contents(newContents) {
@@ -10,12 +19,18 @@ class CellInfo implements Emitter<CellEvents> {
         this.emit('contentChanged', newContents);
     }
 
+    set highlight(highlight : CellHighlight) {
+        this.#highlight = highlight;
+        this.emit('highlightChanged', highlight);
+    }
+
     public isPennedIn() : boolean {
         return this.contents !== "";
     }
 
-    listeners : { [K in keyof CellEvents] : Array<(p : CellEvents[K]) => void>; } = { 
-        contentChanged: []
+    listeners : { [K in keyof CellEvents] : Array<any>; } = { 
+        contentChanged: [],
+        highlightChanged: [],
     };
     on<K extends EventKey<CellEvents>>(key : K, fn : EventReceiver<CellEvents[K]>) {
         this.listeners[key].push(fn);
@@ -74,8 +89,12 @@ type CrosswordEvents<L> = {
     cursorMoved : Cursor<L>
 }
 
+function mod(a : number, m : number) : number {
+    return (a % m + m) % m;
+}
+
 function modIndex<T>(array : Array<T>, index : number) {
-    return array[(index % array.length + array.length) % array.length];
+    return array[mod(index, array.length)];
 }
 
 // A crossword where lights have identifiers of type L and cells have identifiers of type C.
@@ -98,6 +117,7 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
                 let cellInfo = modIndex(light.cellInfos, this.cursor.index - 1);
                 cellInfo.contents = "";
                 this.cursor.index--;
+                this.emit('cursorMoved', this.cursor);
                 e.preventDefault();
             } else if (e.key.length === 1) {
                 if (!this.cursor) return;
@@ -106,8 +126,25 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
                 let cellInfo = modIndex(light.cellInfos, this.cursor.index);
                 cellInfo.contents = e.key.toUpperCase();
                 this.cursor.index++;
+                this.emit('cursorMoved', this.cursor);
                 e.preventDefault();
             }
+        });
+
+        this.on('cursorMoved', (cursor) => {
+            let light = this.lights.get(cursor.lid);
+            if (!light) return;
+
+            let lightLength = light.cellInfos.length;
+            light.cellInfos.forEach((cellInfo, i) => {
+                if (i === mod(cursor.index, lightLength)) {
+                    cellInfo.highlight = CellHighlight.CursorBefore;
+                } else if (i === mod(cursor.index - 1, lightLength)) {
+                    cellInfo.highlight = CellHighlight.CursorAfter;
+                } else {
+                    cellInfo.highlight = CellHighlight.CurrentWord;
+                }
+            });
         });
     }
 
@@ -143,7 +180,14 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
     }
 
     public setCursor(lid : L, index? : number) {
-        // Unset old cursor
+        if (this.cursor) {
+            let oldLight = this.lights.get(this.cursor.lid);
+            if (oldLight) {
+                oldLight.cellInfos.forEach((cellInfo) => {
+                    cellInfo.highlight = CellHighlight.None;
+                });
+            }
+        }
 
         let light = this.lights.get(lid);
         if (light === undefined) {
@@ -160,7 +204,6 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
         }
 
         this.cursor = { lid, index };
-        console.log("Cursor moved: ", this.cursor);
         this.emit("cursorMoved", this.cursor);
     }
 
