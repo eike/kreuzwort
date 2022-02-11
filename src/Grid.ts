@@ -14,11 +14,13 @@ class Grid extends HTMLElement {
             grid.push(cells);
         }
 
+        // Helper function to get all the lights running in one direction.
         function getLights(
                 dirWidth : number, 
                 dirLength : number, 
                 dirName : string, 
-                indexer : (i : number, j : number) => Element)
+                indexer : (i : number, j : number) => Element,
+                cellNamer : (i : number, j : number) => string)
                 : { lid : string , cells : Element[] }[] {
             var lights = [];
             for (var i = 0; i < dirWidth; i++) {
@@ -32,7 +34,12 @@ class Grid extends HTMLElement {
                             lights.push(light);
                         }
                         if (cell.getAttribute(dirName) !== "no-light") {
-                            light = { lid: `${cell.getAttribute("number")}-${dirName}`, cells: [cell] };
+                            let cellNumber = cell.getAttribute("number");
+                            if (cellNumber) {
+                                light = { lid: `${cellNumber}-${dirName}`, cells: [cell] };
+                            } else {
+                                light = { lid: `${cellNamer(i, j)}-${dirName}`, cells: [cell] };
+                            }
                         } else {
                             light = null;
                         }
@@ -49,8 +56,8 @@ class Grid extends HTMLElement {
             return lights;
         }
 
-        let lights = getLights(grid.length, grid[0].length, "across", (i, j) => grid[i][j])
-            .concat(getLights(grid[0].length, grid.length, "down", (i, j) => grid[j][i]));
+        let lights = getLights(grid.length, grid[0].length, "across", (i, j) => grid[i][j], (i, j) => `(${i},${j})`)
+            .concat(getLights(grid[0].length, grid.length, "down", (i, j) => grid[j][i], (i, j) => `(${j},${i})`));
 
         let crossword = this.closest('kw-crossword') as Crossword<string, Element>;
 
