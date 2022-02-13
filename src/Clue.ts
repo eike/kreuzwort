@@ -27,7 +27,7 @@ class Clue extends HTMLElement {
     }
 
     connectedCallback() {
-        let crossword = this.closest('kw-crossword') as Crossword<string, Element>;
+        let crossword = this.closest('kw-crossword') as Crossword<Element>;
 
         crossword.setClueForLight(this.lid, this);
         
@@ -37,7 +37,7 @@ class Clue extends HTMLElement {
 
         this.updateLightDiv();
 
-        crossword.lights.get(this.lid)?.on('contentChanged', this.updateLightDiv.bind(this));
+        crossword.getLight(this.lid)?.on('contentChanged', this.updateLightDiv.bind(this));
 
         crossword.on('cursorMoved', cursor => {
             if (cursor.lid === this.lid) {
@@ -56,9 +56,9 @@ class Clue extends HTMLElement {
     }
 
     updateLightDiv() {
-        let crossword = this.closest('kw-crossword') as Crossword<string, Element>;
+        let crossword = this.closest('kw-crossword') as Crossword<Element>;
         this.lightDiv.innerHTML = ""; // TODO: Is there a better way?
-        for (let cellInfo of crossword.lights.get(this.lid)?.cellInfos || []) {
+        for (let cellInfo of crossword.getLight(this.lid)?.cellInfos || []) {
             let span = document.createElement('span');
             span.textContent = cellInfo.contents;
             this.lightDiv.appendChild(span);
@@ -66,7 +66,7 @@ class Clue extends HTMLElement {
     }
 
     get lid() {
-        return `${this.getAttribute('light-start')}-${this.getAttribute('light-type')}`;
+        return new Lid(this.getAttribute('light-type') || "", this.getAttribute('light-start') || "");
     }
 
     test() {

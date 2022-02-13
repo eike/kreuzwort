@@ -21,29 +21,31 @@ class Grid extends HTMLElement {
                 dirName : string, 
                 indexer : (i : number, j : number) => Element,
                 cellNamer : (i : number, j : number) => string)
-                : { lid : string , cells : Element[] }[] {
+                : { lid : Lid , cells : Cell[] }[] {
             var lights = [];
             for (var i = 0; i < dirWidth; i++) {
                 var light = null;
                 for (var j = 0; j < dirLength; j++) {
                     let cell = indexer(i, j);
-                    if (light !== null && cell.tagName === "KW-C" && !cell.hasAttribute(dirName)) {
+                    if (light !== null && cell instanceof Cell && !cell.hasAttribute(dirName)) {
+                        cell.lights.set(dirName, [ light.lid, light.cells.length ]);
                         light.cells.push(cell);
-                    } else if (cell.tagName === "KW-C" && cell.hasAttribute(dirName)) {
+                    } else if (cell instanceof Cell && cell.hasAttribute(dirName)) {
                         if (light !== null) {
                             lights.push(light);
                         }
                         if (cell.getAttribute(dirName) !== "no-light") {
                             let cellNumber = cell.getAttribute("number");
                             if (cellNumber) {
-                                light = { lid: `${cellNumber}-${dirName}`, cells: [cell] };
+                                light = { lid: new Lid(dirName, cellNumber), cells: [cell] };
                             } else {
-                                light = { lid: `${cellNamer(i, j)}-${dirName}`, cells: [cell] };
+                                light = { lid: new Lid(dirName, cellNamer(i, j)), cells: [cell] };
                             }
+                            cell.lights.set(dirName, [ light.lid, 0 ]);
                         } else {
                             light = null;
                         }
-                    } else if (cell.tagName === "KW-B" && light !== null) {
+                    } else if (light !== null) {
                         lights.push(light);
                         light = null;
                     }
@@ -59,7 +61,7 @@ class Grid extends HTMLElement {
         let lights = getLights(grid.length, grid[0].length, "across", (i, j) => grid[i][j], (i, j) => `(${i},${j})`)
             .concat(getLights(grid[0].length, grid.length, "down", (i, j) => grid[j][i], (i, j) => `(${j},${i})`));
 
-        let crossword = this.closest('kw-crossword') as Crossword<string, Element>;
+        let crossword = this.closest('kw-crossword') as Crossword<Element>;
 
         for (let light of lights) {
             crossword.setCellsForLight(light.lid, light.cells);

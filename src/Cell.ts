@@ -77,7 +77,8 @@ class Cell extends HTMLElement {
     }
 
     connectedCallback(): void {
-        let crossword = this.closest('kw-crossword') as Crossword<string, Cell>;
+        let crossword = this.closest('kw-crossword') as Crossword<Cell>;
+        crossword.getOrAddCell(this);
 
         crossword?.cells.get(this)?.on('contentChanged', (newContent) => {
             this.entry.textContent = newContent;

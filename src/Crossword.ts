@@ -45,6 +45,26 @@ class CellInfo implements Emitter<CellEvents> {
     }
 }
 
+class Lid {
+    lightType : string;
+    lightStart : string;
+
+    constructor(lightTypeOrString : string, lightStart? : string) {
+        if (lightStart) {
+            this.lightType = lightTypeOrString;
+            this.lightStart = lightStart;
+        } else {
+            let parts = lightTypeOrString.split("-");
+            this.lightStart = parts[0];
+            this.lightType = parts[1];
+        }
+    }
+
+    toString() {
+        return `${this.lightStart}-${this.lightType}`;
+    }
+}
+
 type LightEvents = {
     contentChanged : Light;
 }
@@ -83,10 +103,10 @@ class Light implements Emitter<LightEvents> {
     }
 }
 
-type Cursor<L> = { lid : L, index : number }
+type Cursor = { lid : Lid, index : number }
 
-type CrosswordEvents<L> = {
-    cursorMoved : Cursor<L>
+type CrosswordEvents = {
+    cursorMoved : Cursor
 }
 
 function mod(a : number, m : number) : number {
@@ -98,10 +118,10 @@ function modIndex<T>(array : Array<T>, index : number) {
 }
 
 // A crossword where lights have identifiers of type L and cells have identifiers of type C.
-class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>> {
-    lights : Map<L, Light>;
+class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
+    lights : Map<string, Light>;
     cells : Map<C, CellInfo>;
-    cursor : Cursor<L> | null;
+    cursor : Cursor | null;
 
     constructor() {
         super();
@@ -112,7 +132,7 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
         this.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace') {
                 if (!this.cursor) return;
-                let light = this.lights.get(this.cursor.lid);
+                let light = this.getLight(this.cursor.lid);
                 if (!light) return;
                 let cellInfo = modIndex(light.cellInfos, this.cursor.index - 1);
                 cellInfo.contents = "";
@@ -121,7 +141,7 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
                 e.preventDefault();
             } else if (e.key.length === 1) {
                 if (!this.cursor) return;
-                let light = this.lights.get(this.cursor.lid);
+                let light = this.getLight(this.cursor.lid);
                 if (!light) return;
                 let cellInfo = modIndex(light.cellInfos, this.cursor.index);
                 cellInfo.contents = e.key.toUpperCase();
@@ -132,7 +152,7 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
         });
 
         this.on('cursorMoved', (cursor) => {
-            let light = this.lights.get(cursor.lid);
+            let light = this.getLight(cursor.lid);
             if (!light) return;
 
             let lightLength = light.cellInfos.length;
@@ -148,40 +168,44 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
         });
     }
 
-    public setCellsForLight(lid : L, cells : C[]) {
+    public setCellsForLight(lid : Lid, cells : C[]) {
         let light = this.getOrAddLight(lid);
-
-        let cellInfos = cells.map((cell) => {
-            var cellInfo = this.cells.get(cell);
-            if (cellInfo !== undefined) {
-                return cellInfo;
-            } else {
-                let cellInfo = new CellInfo();
-                this.cells.set(cell, cellInfo);
-                return cellInfo;
-            }
-        });
-
+        let cellInfos = cells.map((cell) => this.getOrAddCell(cell));
         light.cellInfos = cellInfos;
     }
 
-    public setClueForLight(lid : L, clue : Element) {
+    public setClueForLight(lid : Lid, clue : Element) {
         let light = this.getOrAddLight(lid);
         light.clue = clue;        
     }
 
-    getOrAddLight(lid : L) : Light {
-        var light = this.lights.get(lid);
+    public getLight(lid : Lid) : Light | undefined {
+        return this.lights.get(lid.toString());
+    }
+
+    getOrAddLight(lid : Lid) : Light {
+        var light = this.getLight(lid);
         if (light === undefined) {
             light = new Light();
-            this.lights.set(lid, light);
+            this.lights.set(lid.toString(), light);
         }
         return light;
     }
 
-    public setCursor(lid : L, index? : number) {
+    public getOrAddCell(cell : C) : CellInfo {
+        var cellInfo = this.cells.get(cell);
+        if (cellInfo !== undefined) {
+            return cellInfo;
+        } else {
+            let cellInfo = new CellInfo();
+            this.cells.set(cell, cellInfo);
+            return cellInfo;
+        }
+    }
+
+    public setCursor(lid : Lid, index? : number) {
         if (this.cursor) {
-            let oldLight = this.lights.get(this.cursor.lid);
+            let oldLight = this.getLight(this.cursor.lid);
             if (oldLight) {
                 oldLight.cellInfos.forEach((cellInfo) => {
                     cellInfo.highlight = CellHighlight.None;
@@ -189,7 +213,7 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
             }
         }
 
-        let light = this.lights.get(lid);
+        let light = this.getLight(lid);
         if (light === undefined) {
             throw new Error(`No light with ID ${lid}.`);
         }
@@ -207,16 +231,16 @@ class Crossword<L, C> extends HTMLElement implements Emitter<CrosswordEvents<L>>
         this.emit("cursorMoved", this.cursor);
     }
 
-    listeners : { [K in keyof CrosswordEvents<L>] : Array<(p : CrosswordEvents<L>[K]) => void>; } = { 
+    listeners : { [K in keyof CrosswordEvents] : Array<(p : CrosswordEvents[K]) => void>; } = { 
         cursorMoved: []
     };
-    on<K extends EventKey<CrosswordEvents<L>>>(key : K, fn : EventReceiver<CrosswordEvents<L>[K]>) {
+    on<K extends EventKey<CrosswordEvents>>(key : K, fn : EventReceiver<CrosswordEvents[K]>) {
         this.listeners[key].push(fn);
     }
-    off<K extends EventKey<CrosswordEvents<L>>>(key : K, fn : EventReceiver<CrosswordEvents<L>[K]>) {
+    off<K extends EventKey<CrosswordEvents>>(key : K, fn : EventReceiver<CrosswordEvents[K]>) {
         this.listeners[key] = this.listeners[key].filter(f => f !== fn);
     }
-    emit<K extends EventKey<CrosswordEvents<L>>>(key : K, params : CrosswordEvents<L>[K]) {
+    emit<K extends EventKey<CrosswordEvents>>(key : K, params : CrosswordEvents[K]) {
         this.listeners[key].forEach(fn => {
             fn(params);
         });
