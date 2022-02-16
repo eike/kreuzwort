@@ -45,28 +45,11 @@ class CellInfo implements Emitter<CellEvents> {
     }
 }
 
-class Lid {
-    lightType : string;
-    lightStart : string;
-
-    constructor(lightTypeOrString : string, lightStart? : string) {
-        if (lightStart) {
-            this.lightType = lightTypeOrString;
-            this.lightStart = lightStart;
-        } else {
-            let parts = lightTypeOrString.split("-");
-            this.lightStart = parts[0];
-            this.lightType = parts[1];
-        }
-    }
-
-    toString() {
-        return `${this.lightStart}-${this.lightType}`;
-    }
-}
 
 type LightEvents = {
     contentChanged : Light;
+    focus : { light : Light, index : number };
+    blur : { light : Light };
 }
 
 class Light implements Emitter<LightEvents> {
@@ -83,12 +66,16 @@ class Light implements Emitter<LightEvents> {
 
     public get cellInfos() { return this._cellInfos; }
 
+    public get length() { return this._cellInfos.length; }
+
     public cellChanged(newContent : string) {
         this.emit('contentChanged', this);
     }
     
-    listeners : { [K in keyof LightEvents] : Array<(p : LightEvents[K]) => void>; } = { 
-        contentChanged: []
+    listeners : { [K in keyof LightEvents] : Array<any>; } = { 
+        contentChanged: [],
+        focus: [],
+        blur: [],
     };
     on<K extends EventKey<LightEvents>>(key : K, fn : EventReceiver<LightEvents[K]>) {
         this.listeners[key].push(fn);
@@ -103,18 +90,18 @@ class Light implements Emitter<LightEvents> {
     }
 }
 
-type Cursor = { lid : Lid, index : number }
-
-type CrosswordEvents = {
-    cursorMoved : Cursor
-}
-
 function mod(a : number, m : number) : number {
     return (a % m + m) % m;
 }
 
 function modIndex<T>(array : Array<T>, index : number) {
     return array[mod(index, array.length)];
+}
+
+type Cursor = { lid : Lid, index : number }
+
+type CrosswordEvents = {
+    cursorMoved : { cursor : Cursor, light : Light }
 }
 
 // A crossword where lights have identifiers of type L and cells have identifiers of type C.
@@ -137,7 +124,7 @@ class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
                 let cellInfo = modIndex(light.cellInfos, this.cursor.index - 1);
                 cellInfo.contents = "";
                 this.cursor.index--;
-                this.emit('cursorMoved', this.cursor);
+                this.emit('cursorMoved', { cursor: this.cursor, light: light });
                 e.preventDefault();
             } else if (e.key.length === 1) {
                 if (!this.cursor) return;
@@ -146,20 +133,17 @@ class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
                 let cellInfo = modIndex(light.cellInfos, this.cursor.index);
                 cellInfo.contents = e.key.toUpperCase();
                 this.cursor.index++;
-                this.emit('cursorMoved', this.cursor);
+                this.emit('cursorMoved', { cursor: this.cursor, light: light });
                 e.preventDefault();
             }
         });
 
-        this.on('cursorMoved', (cursor) => {
-            let light = this.getLight(cursor.lid);
-            if (!light) return;
-
-            let lightLength = light.cellInfos.length;
-            light.cellInfos.forEach((cellInfo, i) => {
-                if (i === mod(cursor.index, lightLength)) {
+        this.on('cursorMoved', (e) => {
+            let lightLength = e.light.length;
+            e.light.cellInfos.forEach((cellInfo, i) => {
+                if (i === mod(e.cursor.index, lightLength)) {
                     cellInfo.highlight = CellHighlight.CursorBefore;
-                } else if (i === mod(cursor.index - 1, lightLength)) {
+                } else if (i === mod(e.cursor.index - 1, lightLength)) {
                     cellInfo.highlight = CellHighlight.CursorAfter;
                 } else {
                     cellInfo.highlight = CellHighlight.CurrentWord;
@@ -228,7 +212,7 @@ class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
         }
 
         this.cursor = { lid, index };
-        this.emit("cursorMoved", this.cursor);
+        this.emit("cursorMoved", { cursor: this.cursor, light: light });
     }
 
     listeners : { [K in keyof CrosswordEvents] : Array<(p : CrosswordEvents[K]) => void>; } = { 

@@ -2,24 +2,50 @@
     --cell-size: 30px;
     --cell-width: var(--cell-size);
     --cell-height: var(--cell-size);
+    --current-clue: #ffd566;
+    --current-light: #ffe7a3;
+    --cursor-color: orange;
+    --cursor-width: 3px;
+
+    font: 16px/22px Palatino;
 }
 
-kw-clue {
-    width: 500px;
+kw-crossword {
+    display: block;
+    width: 720px;
+    margin: 0 auto;
+}
+
+h2 {
+    font: bold 15px/22px Avenir;
+    margin: 22px 0 0;
+    text-transform: uppercase;
+}
+
+kw-current-clue {
+    display: block;
+    border: 3px solid orange;
+    background-color: var(--current-clue);
+    margin: 22px 0;
+    padding: 3px;
 }
 
 kw-clue:focus {
-    background-color: orange;
+    background-color: var(--current-clue);
 }
 
 kw-grid {
     display: table;
-    border-collapse: collapse;
+    margin: 0 auto;
     border: 3px solid black;
+    box-sizing: border-box;
+    --cell-content-offset-left: 0;
+    --cell-content-offset-top: 7px;
 }
 
 kw-row {
     display: table-row;
+    box-sizing: border-box;
 }
 
 kw-c, kw-b {
@@ -32,7 +58,8 @@ kw-c, kw-b {
     max-height: var(--cell-height);
     font: 18px Avenir, sans-serif;
     text-align: center;
-    vertical-align: middle;
+    overflow: hidden;
+    /*box-sizing: border-box;*/
 }
 
 kw-b {
@@ -52,26 +79,35 @@ kw-c[number]::before {
 
 kw-clue {
     display: block;
-    padding-left: 30px;
+    position: relative;
+    padding: 0 0 0 30px;
+    margin: 0;
 }
 
 kw-clue::before {
-    display: inline-block;
-    width: 25px;
-    position: absolute;
-    left: 0px;
     content: attr(light-start) " ";
+    display: block;
+    position: absolute;
+    left: 0;
+    width: 22px;/*
+    padding-right: 5px;
+    margin-right: -30px;*/
     text-align: right;
-    font-weight: bold;
+    font: bold 15px Avenir;
+    font-variant-numeric: tabular-nums;
 }
 
 kw-grid.barred {
     border: none;
     --cell-width: 36px;
     --cell-height: 36px;
+    --cell-content-offset-top: 10px;
+    --cell-content-offset-left: 1px;
 }
 
 kw-grid.barred kw-c {
+    box-sizing: border-box;
+    padding: 1px 0 0 1px;
     box-shadow:
         1px 0 0 0 black, 
         0 1px 0 0 black, 
@@ -81,11 +117,16 @@ kw-grid.barred kw-c {
 }
 
 kw-grid.barred kw-c[number]::before {
-    top: 2px;
-    left: 4px;
+    top: 3px;
+    left: 5px;
 }
 
-kw-grid.barred kw-c[across] {   
+kw-grid.barred kw-c.across[number]::before {
+    left: 6px;
+}
+
+kw-grid.barred kw-c[across] {
+    padding: 1px 2px 0 3px;
     box-shadow:
         1px 0 0 0 black, 
         0 1px 0 0 black, 
@@ -95,6 +136,7 @@ kw-grid.barred kw-c[across] {
 }
 
 kw-grid.barred kw-c[down] {
+    padding: 3px 0 0 1px;
     box-shadow:
         1px 0 0 0 black, 
         0 1px 0 0 black, 
@@ -104,6 +146,7 @@ kw-grid.barred kw-c[down] {
 }
 
 kw-grid.barred kw-c[across][down] {
+    padding: 3px 2px 0 3px;
     box-shadow:
         1px 0 0 0 black, 
         0 1px 0 0 black, 
@@ -115,3 +158,170 @@ kw-grid.barred kw-c[across][down] {
 kw-grid.barred kw-b {
     background: none;
 }
+
+kw-grid.swedish {
+    --cell-width: 44px;
+    --cell-height: 44px;
+    border-collapse: collapse;
+}
+
+kw-grid.swedish kw-b {
+    background-color: darkblue;
+}
+
+kw-grid.swedish kw-box-clue {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font: 10px/10px Palatino;
+}
+
+    .swedish kw-b, .swedish kw-c {
+        border: 1px solid black;
+    }
+    
+    .swedish kw-box-clue {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+        height: 43px;
+        width: 43px;
+        font-size: 9px;
+        line-height: 9px;
+        text-align: left;
+        padding: 1px 2px 2px;
+        color: #eee;
+    }
+    
+    .swedish kw-box-clue:first-child:not(:last-child) {
+        height: 21px;
+    }
+    
+    .swedish kw-box-clue:last-child:not(:first-child) {
+        height: 22px;
+        border-top: 1px solid #eee;
+        position: absolute;
+        top: 21px;
+        left: 0;
+    }
+    
+    kw-box-clue[direction=down]::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: calc(50% - 4.5px);
+        border-style: solid;
+        border-width: 7px 4.5px 0 4.5px;
+        border-color: var(--arrow-color, black) transparent transparent;
+        z-index: 1;
+    }
+    
+    kw-box-clue[direction=right]::after {
+        content: '';
+        position: absolute;
+        top: calc(50% - 4.5px);
+        right: -8px;
+        border-style: solid;
+        border-width: 4.5px 0 4.5px 7px;
+        border-color: transparent transparent transparent var(--arrow-color, black);
+        z-index: 1;
+    }
+    
+    kw-box-clue[direction=right-down]::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        right: calc(-50% - 4.5px);
+        border-style: solid;
+        border-width: 7px 4.5px 0 4.5px;
+        border-color: var(--arrow-color, black) transparent transparent;
+        box-shadow:   3.5px -4px 0px -3px var(--arrow-color, black),
+                      1.5px -4px 0px -3px var(--arrow-color, black),
+                     -1.5px -4px 0px -3px var(--arrow-color, black),
+                     -3.5px -4px 0px -3px var(--arrow-color, black),
+                     -5.5px -4px 0px -3px var(--arrow-color, black),
+                     -7.5px -4px 0px -3px var(--arrow-color, black),
+                     -9.5px -4px 0px -3px var(--arrow-color, black),
+                    -11.5px -4px 0px -3px var(--arrow-color, black),
+                    -13.5px -4px 0px -3px var(--arrow-color, black),
+                    -15.5px -4px 0px -3px var(--arrow-color, black),
+                    -17.5px -4px 0px -3px var(--arrow-color, black),
+                    -19.5px -4px 0px -3px var(--arrow-color, black),
+                    -20.5px -4px 0px -3px var(--arrow-color, black);
+        z-index: 1;
+    }
+
+    kw-box-clue[direction=left-down]::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        left: calc(-50% - 4.5px);
+        border-style: solid;
+        border-width: 7px 4.5px 0 4.5px;
+        border-color: var(--arrow-color, black) transparent transparent;
+        box-shadow:  -3.5px -4px 0px -3px var(--arrow-color, black),
+                     -1.5px -4px 0px -3px var(--arrow-color, black),
+                      1.5px -4px 0px -3px var(--arrow-color, black),
+                      3.5px -4px 0px -3px var(--arrow-color, black),
+                      5.5px -4px 0px -3px var(--arrow-color, black),
+                      7.5px -4px 0px -3px var(--arrow-color, black),
+                      9.5px -4px 0px -3px var(--arrow-color, black),
+                     11.5px -4px 0px -3px var(--arrow-color, black),
+                     13.5px -4px 0px -3px var(--arrow-color, black),
+                     15.5px -4px 0px -3px var(--arrow-color, black),
+                     17.5px -4px 0px -3px var(--arrow-color, black),
+                     19.5px -4px 0px -3px var(--arrow-color, black),
+                     20.5px -4px 0px -3px var(--arrow-color, black);
+        z-index: 1;
+    }
+    
+    kw-box-clue[direction=up-right]::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: calc(-1 * var(--cell-size) / 2 - 3.5px);
+        border-style: solid;
+        border-width: 4.5px 0 4.5px 7px;
+        border-color: transparent transparent transparent var(--arrow-color, black) ;
+        box-shadow:  -4px  -3.5px 0px -3px var(--arrow-color, black),
+                     -4px  -1.5px 0px -3px var(--arrow-color, black),
+                     -4px   1.5px 0px -3px var(--arrow-color, black),
+                     -4px   3.5px 0px -3px var(--arrow-color, black),
+                     -4px   5.5px 0px -3px var(--arrow-color, black),
+                     -4px   7.5px 0px -3px var(--arrow-color, black),
+                     -4px   9.5px 0px -3px var(--arrow-color, black),
+                     -4px  11.5px 0px -3px var(--arrow-color, black),
+                     -4px  13.5px 0px -3px var(--arrow-color, black),
+                     -4px  15.5px 0px -3px var(--arrow-color, black),
+                     -4px  17.5px 0px -3px var(--arrow-color, black),
+                     -4px  19.5px 0px -3px var(--arrow-color, black),
+                     -4px  20.5px 0px -3px var(--arrow-color, black);
+        z-index: 1;
+    }
+
+    kw-box-clue[direction=down-right]::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        bottom: calc(-1 * var(--cell-size) / 2 - 3.5px);
+        border-style: solid;
+        border-width: 4.5px 0 4.5px 7px;
+        border-color: transparent transparent transparent var(--arrow-color, black) ;
+        box-shadow:  -4px   3.5px 0px -3px var(--arrow-color, black),
+                     -4px   1.5px 0px -3px var(--arrow-color, black),
+                     -4px  -1.5px 0px -3px var(--arrow-color, black),
+                     -4px  -3.5px 0px -3px var(--arrow-color, black),
+                     -4px  -5.5px 0px -3px var(--arrow-color, black),
+                     -4px  -7.5px 0px -3px var(--arrow-color, black),
+                     -4px  -9.5px 0px -3px var(--arrow-color, black),
+                     -4px -11.5px 0px -3px var(--arrow-color, black),
+                     -4px -13.5px 0px -3px var(--arrow-color, black),
+                     -4px -15.5px 0px -3px var(--arrow-color, black),
+                     -4px -17.5px 0px -3px var(--arrow-color, black),
+                     -4px -19.5px 0px -3px var(--arrow-color, black),
+                     -4px -20.5px 0px -3px var(--arrow-color, black);
+        z-index: 1;
+    }
