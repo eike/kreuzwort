@@ -14,7 +14,7 @@ class Ref extends HTMLElement {
     }
 
     connectedCallback() {
-        let crossword = this.closest('kw-crossword') as Crossword<string, Element>;
+        let crossword = this.closest('kw-crossword') as Crossword<Element>;
 
         let light = crossword.lights.get(this.getAttribute('light') || '');
         if (light) {
@@ -22,9 +22,8 @@ class Ref extends HTMLElement {
             light.on('contentChanged', this.updateInner.bind(this));
         }
 
-        this.addEventListener('click', e => {
-            let lid = this.getAttribute('light');
-            if (lid) crossword.setCursor(lid);
+        this.addEventListener('click', (e) => {
+            crossword.setCursor(this.lid);
         });
     }
 
@@ -36,5 +35,9 @@ class Ref extends HTMLElement {
                 return cellInfo.contents;
             }
         }).join("");
+    }
+
+    get lid() : Lid {
+        return new Lid(this.getAttribute('light') || '');
     }
 }
