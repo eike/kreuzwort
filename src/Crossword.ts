@@ -7,21 +7,14 @@ enum CellHighlight {
 
 type CellEvents = {
     contentChanged : string;
-    highlightChanged : CellHighlight;
 }
 class CellInfo implements Emitter<CellEvents> {
     _contents : string = "";
-    #highlight : CellHighlight = CellHighlight.None;
 
     get contents() { return this._contents; }
     set contents(newContents) {
         this._contents = newContents;
         this.emit('contentChanged', newContents);
-    }
-
-    set highlight(highlight : CellHighlight) {
-        this.#highlight = highlight;
-        this.emit('highlightChanged', highlight);
     }
 
     public isPennedIn() : boolean {
@@ -30,7 +23,6 @@ class CellInfo implements Emitter<CellEvents> {
 
     listeners : { [K in keyof CellEvents] : Array<any>; } = { 
         contentChanged: [],
-        highlightChanged: [],
     };
     on<K extends EventKey<CellEvents>>(key : K, fn : EventReceiver<CellEvents[K]>) {
         this.listeners[key].push(fn);
