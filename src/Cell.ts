@@ -11,11 +11,13 @@ class Cell extends HTMLElement {
     entry : HTMLSpanElement;
     background : HTMLDivElement;
     cursorDiv: HTMLDivElement;
-    lights : Map<string, [ lid: Lid, index: number ]>; // light-type to lid
+    #lights : Map<string, [ lid: Lid, index: number ]>; // light-type to lid
+    crossword: Crossword<Cell> | null;
 
     constructor() {
         super();
-        this.lights = new Map();
+        this.#lights = new Map();
+        this.crossword = null;
 
         this.shadow = this.attachShadow({ mode: 'closed' });
 
@@ -83,11 +85,11 @@ class Cell extends HTMLElement {
                     break;
                 case PositionInCell.Left:
                 case PositionInCell.Right:
-                    if (this.lights.has('across')) this.cursorDiv.classList.add('across');
+                    if (this.#lights.has('across')) this.cursorDiv.classList.add('across');
                     break;
                 case PositionInCell.Top:
                 case PositionInCell.Bottom:
-                    if (this.lights.has('down')) this.cursorDiv.classList.add('down');
+                    if (this.#lights.has('down')) this.cursorDiv.classList.add('down');
                     break;
             }
         });
@@ -96,15 +98,15 @@ class Cell extends HTMLElement {
             let crossword = this.closest('kw-crossword') as Crossword<Cell>;
             let positionInCell = this.positionInCell(e.offsetX, e.offsetY);
             var light;
-            if (positionInCell === PositionInCell.Left && (light = this.lights.get('across'))) {
+            if (positionInCell === PositionInCell.Left && (light = this.#lights.get('across'))) {
                 crossword.setCursor(light[0], light[1]);
-            } else if (positionInCell === PositionInCell.Right && (light = this.lights.get('across'))) {
+            } else if (positionInCell === PositionInCell.Right && (light = this.#lights.get('across'))) {
                 crossword.setCursor(light[0], light[1] + 1);
-            } else if (positionInCell === PositionInCell.Top && (light = this.lights.get('down'))) {
+            } else if (positionInCell === PositionInCell.Top && (light = this.#lights.get('down'))) {
                 crossword.setCursor(light[0], light[1]);
-            } else if (positionInCell === PositionInCell.Bottom && (light = this.lights.get('down'))) {
+            } else if (positionInCell === PositionInCell.Bottom && (light = this.#lights.get('down'))) {
                 crossword.setCursor(light[0], light[1]+ 1);
-            } else if (light = this.lights.values().next().value) {
+            } else if (light = this.#lights.values().next().value) {
                 // TODO: Implement some form of toggling.
                 crossword.setCursor(light[0], light[1]);
             }
@@ -112,33 +114,11 @@ class Cell extends HTMLElement {
     }
 
     connectedCallback(): void {
-        let crossword = this.closest('kw-crossword') as Crossword<Cell>;
-        crossword.getOrAddCell(this);
+        this.crossword = this.closest('kw-crossword') as Crossword<Cell>;
+        this.crossword.getOrAddCell(this);
 
-        crossword?.cells.get(this)?.on('contentChanged', (newContent) => {
+        this.crossword?.cells.get(this)?.on('contentChanged', (newContent) => {
             this.entry.textContent = newContent;
-        });
-
-        crossword?.on('cursorMoved', (e) => {
-            this.background.classList.remove('current-word');
-            this.cursorDiv.classList.remove('before-across');
-            this.cursorDiv.classList.remove('before-down');
-            this.cursorDiv.classList.remove('after-across');
-            this.cursorDiv.classList.remove('after-down');
-            let crossingLight = this.lights.get(e.cursor.lid.lightType);
-            if (crossingLight && crossingLight[0].equals(e.cursor.lid)) {
-                this.background.classList.add('current-word');
-                if (mod(e.cursor.index, e.light.length) === crossingLight[1]) {
-                    if (crossingLight[0].lightType === "across") {
-                        this.cursorDiv.classList.add('before-across');
-                    } else if (crossingLight[0].lightType === "down") {
-                        this.cursorDiv.classList.add('before-down');
-                    }
-                }
-                if (mod(e.cursor.index, e.light.length) === 0 && crossingLight[1] === e.light.length - 1) {
-                    this.cursorDiv.classList.add(`after-${crossingLight[0].lightType}`);
-                }
-            }
         });
     }
 
@@ -151,5 +131,25 @@ class Cell extends HTMLElement {
             ].sort((a, b) => a[0] - b[0])[0];
         if (closestEdge[0] <= 10) return closestEdge[1];
         else return PositionInCell.Center;
+    }
+
+    public addLight(lid : Lid, index : number) {
+        this.#lights.set(lid.lightType, [ lid, index ]);
+
+        this.crossword?.getLight(lid).on('focus', (e) => {
+            this.background.classList.add('current-word');
+            this.cursorDiv.classList.remove('before-across', 'before-down', 'after-across', 'after-down');
+            if (mod(e.index, e.light.length) === index) {
+                this.cursorDiv.classList.add(`before-${e.light.lid.lightType}`);
+            }
+            if (mod(e.index, e.light.length) === 0 && index === e.light.length - 1) {
+                this.cursorDiv.classList.add(`after-${e.light.lid.lightType}`);
+            }
+        });
+
+        this.crossword?.getLight(lid).on('blur', (e) => {
+            this.background.classList.remove('current-word')
+            this.cursorDiv.classList.remove('before-across', 'before-down', 'after-across', 'after-down');
+        });
     }
 }

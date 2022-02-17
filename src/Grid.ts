@@ -28,7 +28,7 @@ class Grid extends HTMLElement {
                 for (var j = 0; j < dirLength; j++) {
                     let cell = indexer(i, j);
                     if (light !== null && cell instanceof Cell && !cell.hasAttribute(dirName)) {
-                        cell.lights.set(dirName, [ light.lid, light.cells.length ]);
+                        cell.addLight(light.lid, light.cells.length);
                         light.cells.push(cell);
                     } else if (cell instanceof Cell && cell.hasAttribute(dirName)) {
                         if (light !== null) {
@@ -41,7 +41,7 @@ class Grid extends HTMLElement {
                             } else {
                                 light = { lid: new Lid(dirName, cellNamer(i, j)), cells: [cell] };
                             }
-                            cell.lights.set(dirName, [ light.lid, 0 ]);
+                            cell.addLight(light.lid, 0);
                         } else {
                             light = null;
                         }

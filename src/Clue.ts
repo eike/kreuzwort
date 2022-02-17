@@ -1,7 +1,7 @@
 class Clue extends HTMLElement {
     lightDiv : HTMLDivElement;
     input : HTMLInputElement;
-    focusFromCursorMove : boolean = false;
+    focusFromLightFocus : boolean = false;
 
     constructor() {
         super();
@@ -35,32 +35,37 @@ class Clue extends HTMLElement {
     connectedCallback() {
         let crossword = this.closest('kw-crossword') as Crossword<Element>;
 
-        crossword.setClueForLight(this.lid, this);
-        
+        crossword.getLight(this.lid).clue = this;
         this.updateLightDiv();
 
-        crossword.getLight(this.lid)?.on('contentChanged', this.updateLightDiv.bind(this));
-
-        crossword.on('cursorMoved', (e) => {
+        crossword.getLight(this.lid).on('contentChanged', this.updateLightDiv.bind(this));
+        crossword.getLight(this.lid).on('focus', (e) => {
+            for (let span of this.lightDiv.children) {
+                span.classList.remove('cursor-before');
+            }
+            this.focusFromLightFocus = true;
+            this.focus({preventScroll: true});
+            this.lightDiv.classList.add('current-light');
+            this.lightDiv.children.item(mod(e.index, e.light.length))?.classList.add('cursor-before');
+        });
+        crossword.getLight(this.lid).on('blur', (e) => {
             this.lightDiv.classList.remove('current-light');
             for (let span of this.lightDiv.children) {
                 span.classList.remove('cursor-before');
             }
-            if (e.cursor.lid.equals(this.lid)) {
-                this.focusFromCursorMove = true;
-                this.focus({preventScroll: true});
-                this.lightDiv.classList.add('current-light');
-                this.lightDiv.children.item(mod(e.cursor.index, e.light.length))?.classList.add('cursor-before');
-            }
+            this.blur();
         });
-
+ 
         this.addEventListener('focus', (e) => {
-            if (!this.focusFromCursorMove) {
+            if (!this.focusFromLightFocus) {
                 crossword.setCursor(this.lid);
             }
-            this.focusFromCursorMove = false;
+            this.focusFromLightFocus = false;
         });
 
+        this.addEventListener('blur', (e) => {
+            crossword.setCursor(null);
+        });
     }
 
     updateLightDiv() {

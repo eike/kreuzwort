@@ -48,25 +48,36 @@ class CellInfo implements Emitter<CellEvents> {
 
 type LightEvents = {
     contentChanged : Light;
-    focus : { light : Light, index : number };
+    focus : { light : Light, index : number, internalMove : boolean };
     blur : { light : Light };
 }
 
 class Light implements Emitter<LightEvents> {
-    _cellInfos : CellInfo[] = [];
+    #cellInfos : CellInfo[] = [];
     clue : Element | null = null;
+    #lid : Lid;
+
+    constructor(lid : Lid) {
+        this.#lid = lid;
+    }
 
     public set cellInfos(cellInfos : CellInfo[]) {
-        this._cellInfos = cellInfos;
+        this.#cellInfos = cellInfos;
 
         for (let cellInfo of cellInfos) {
             cellInfo.on('contentChanged', this.cellChanged.bind(this));
         }
     }
 
-    public get cellInfos() { return this._cellInfos; }
+    public get cellInfos() { return this.#cellInfos; }
 
-    public get length() { return this._cellInfos.length; }
+    public get length() { return this.#cellInfos.length; }
+
+    public get lid() { return this.#lid; }
+
+    public getCell(index : number) : CellInfo {
+        return modIndex(this.#cellInfos, index);
+    }
 
     public cellChanged(newContent : string) {
         this.emit('contentChanged', this);
@@ -98,7 +109,7 @@ function modIndex<T>(array : Array<T>, index : number) {
     return array[mod(index, array.length)];
 }
 
-type Cursor = { lid : Lid, index : number }
+type Cursor = { light : Light, index : number }
 
 type CrosswordEvents = {
     cursorMoved : { cursor : Cursor, light : Light }
@@ -119,63 +130,38 @@ class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
         this.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace') {
                 if (!this.cursor) return;
-                let light = this.getLight(this.cursor.lid);
-                if (!light) return;
-                let cellInfo = modIndex(light.cellInfos, this.cursor.index - 1);
+                let cellInfo = this.cursor.light.getCell(this.cursor.index - 1);
                 cellInfo.contents = "";
                 this.cursor.index--;
-                this.emit('cursorMoved', { cursor: this.cursor, light: light });
+                this.cursor.light.emit('focus', { light: this.cursor.light, index: this.cursor.index, internalMove: true });
+                /*this.emit('cursorMoved', { cursor: this.cursor, light: light });*/
                 e.preventDefault();
             } else if (e.key.length === 1) {
                 if (!this.cursor) return;
-                let light = this.getLight(this.cursor.lid);
-                if (!light) return;
-                let cellInfo = modIndex(light.cellInfos, this.cursor.index);
+                let cellInfo = this.cursor.light.getCell(this.cursor.index);
                 cellInfo.contents = e.key.toUpperCase();
                 this.cursor.index++;
-                this.emit('cursorMoved', { cursor: this.cursor, light: light });
+                this.cursor.light.emit('focus', { light: this.cursor.light, index: this.cursor.index, internalMove: true });
                 e.preventDefault();
             }
-        });
-
-        this.on('cursorMoved', (e) => {
-            let lightLength = e.light.length;
-            e.light.cellInfos.forEach((cellInfo, i) => {
-                if (i === mod(e.cursor.index, lightLength)) {
-                    cellInfo.highlight = CellHighlight.CursorBefore;
-                } else if (i === mod(e.cursor.index - 1, lightLength)) {
-                    cellInfo.highlight = CellHighlight.CursorAfter;
-                } else {
-                    cellInfo.highlight = CellHighlight.CurrentWord;
-                }
-            });
         });
     }
 
     public setCellsForLight(lid : Lid, cells : C[]) {
-        let light = this.getOrAddLight(lid);
+        let light = this.getLight(lid);
         let cellInfos = cells.map((cell) => this.getOrAddCell(cell));
         light.cellInfos = cellInfos;
     }
 
-    public setClueForLight(lid : Lid, clue : Element) {
-        let light = this.getOrAddLight(lid);
-        light.clue = clue;        
-    }
+    public getLight(lid : Lid) : Light {
+        let light = this.lights.get(lid.toString());
+        if (light) return light;
 
-    public getLight(lid : Lid) : Light | undefined {
-        return this.lights.get(lid.toString());
+        let newLight = new Light(lid);
+        this.lights.set(lid.toString(), newLight);
+        return newLight;
     }
-
-    getOrAddLight(lid : Lid) : Light {
-        var light = this.getLight(lid);
-        if (light === undefined) {
-            light = new Light();
-            this.lights.set(lid.toString(), light);
-        }
-        return light;
-    }
-
+        
     public getOrAddCell(cell : C) : CellInfo {
         var cellInfo = this.cells.get(cell);
         if (cellInfo !== undefined) {
@@ -187,20 +173,22 @@ class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
         }
     }
 
-    public setCursor(lid : Lid, index? : number) {
+    public setCursor(lid : Lid | null, index? : number) {
+        var internalMove = false;
         if (this.cursor) {
-            let oldLight = this.getLight(this.cursor.lid);
-            if (oldLight) {
-                oldLight.cellInfos.forEach((cellInfo) => {
-                    cellInfo.highlight = CellHighlight.None;
-                });
+            if (lid === null) {
+                this.cursor.light.emit('blur', { light: this.cursor.light });
+                return;
+            }
+            if (this.cursor.light.lid.equals(lid)) {
+                internalMove = true;
+            } else {
+                this.cursor.light.emit('blur', { light: this.cursor.light });
             }
         }
 
+        if (lid === null) return;
         let light = this.getLight(lid);
-        if (light === undefined) {
-            throw new Error(`No light with ID ${lid}.`);
-        }
         if (index === undefined) {
             index = 0;
             for (var i = 0; i < light.cellInfos.length; i++) {
@@ -211,11 +199,11 @@ class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
             }
         }
 
-        this.cursor = { lid, index };
-        this.emit("cursorMoved", { cursor: this.cursor, light: light });
+        this.cursor = { light, index };
+        this.cursor.light.emit('focus', { light, index, internalMove });
     }
 
-    listeners : { [K in keyof CrosswordEvents] : Array<(p : CrosswordEvents[K]) => void>; } = { 
+    listeners : { [K in keyof CrosswordEvents] : Array<any>; } = { 
         cursorMoved: []
     };
     on<K extends EventKey<CrosswordEvents>>(key : K, fn : EventReceiver<CrosswordEvents[K]>) {
