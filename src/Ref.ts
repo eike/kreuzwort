@@ -6,7 +6,7 @@ class Ref extends HTMLElement {
         let shadow = this.attachShadow({mode: "closed"});
         shadow.appendChild(document.createElement('slot'));
         let refOuter = document.createElement('span');
-        refOuter.appendChild(document.createTextNode(" ("));
+        refOuter.appendChild(document.createTextNode(" (\u261e "));
         this.refInner = document.createElement('span');
         refOuter.appendChild(this.refInner);
         refOuter.appendChild(document.createTextNode(")"));
@@ -22,7 +22,7 @@ class Ref extends HTMLElement {
             light.on('contentChanged', this.updateInner.bind(this));
         }
 
-        this.addEventListener('click', (e) => {
+        this.refInner.addEventListener('click', (e) => {
             crossword.setCursor(this.lid);
         });
     }
