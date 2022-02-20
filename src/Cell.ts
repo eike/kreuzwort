@@ -26,8 +26,7 @@ class Cell extends HTMLElement {
         div {
             z-index: -2; 
             position: absolute; 
-            width: var(--cell-width);
-            height: var(--cell-height);
+            inset: var(--cell-inset, 0 0 0 0);
             box-sizing: border-box;
             cursor: cell;
         }
@@ -51,19 +50,9 @@ class Cell extends HTMLElement {
         }
         div.after-across {
             box-shadow: inset calc(-1 * var(--cursor-width)) 0 var(--cursor-color);
-            left: 0;
         }
         div.after-down {
             box-shadow: inset 0 calc(-1 * var(--cursor-width)) var(--cursor-color);
-            bottom: 0;
-        }
-        span {
-            position: absolute;
-            display: block;
-            text-align: center;
-            left: var(--cell-content-offset-left, 1px);
-            right: 0;
-            top: var(--cell-content-offset-top, 10px);
         }
         `;
         this.shadow.appendChild(style);
