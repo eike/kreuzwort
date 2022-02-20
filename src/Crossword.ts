@@ -44,7 +44,7 @@ type LightEvents = {
     blur : { light : Light };
 }
 
-class Light implements Emitter<LightEvents> {
+export class Light implements Emitter<LightEvents> {
     #cellInfos : CellInfo[] = [];
     clue : Element | null = null;
     #lid : Lid;
@@ -93,7 +93,7 @@ class Light implements Emitter<LightEvents> {
     }
 }
 
-function mod(a : number, m : number) : number {
+export function mod(a : number, m : number) : number {
     return (a % m + m) % m;
 }
 
@@ -108,7 +108,7 @@ type CrosswordEvents = {
 }
 
 // A crossword where lights have identifiers of type L and cells have identifiers of type C.
-class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
+export default class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
     lights : Map<string, Light>;
     cells : Map<C, CellInfo>;
     cursor : Cursor | null;

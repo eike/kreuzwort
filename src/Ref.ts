@@ -1,4 +1,6 @@
-class Ref extends HTMLElement {
+import Crossword, { Light } from "./Crossword";
+
+export default class Ref extends HTMLElement {
     refInner: HTMLSpanElement;
     constructor() {
         super();

@@ -1,4 +1,6 @@
-class BoxClue extends HTMLElement {
+import Crossword from './Crossword';
+
+export default class BoxClue extends HTMLElement {
     constructor() {
         super();
 

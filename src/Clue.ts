@@ -1,4 +1,6 @@
-class Clue extends HTMLElement {
+import Crossword, { mod } from "./Crossword";
+
+export default class Clue extends HTMLElement {
     lightDiv : HTMLDivElement;
     input : HTMLInputElement;
     focusFromLightFocus : boolean = false;

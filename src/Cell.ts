@@ -1,3 +1,5 @@
+import Crossword, { mod } from './Crossword';
+
 enum PositionInCell {
     Center,
     Top,
@@ -6,7 +8,7 @@ enum PositionInCell {
     Left,
 }
 
-class Cell extends HTMLElement {
+export default class Cell extends HTMLElement {
     shadow : ShadowRoot;
     entry : HTMLSpanElement;
     background : HTMLDivElement;
