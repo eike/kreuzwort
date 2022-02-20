@@ -104,7 +104,7 @@ function modIndex<T>(array : Array<T>, index : number) {
 type Cursor = { light : Light, index : number }
 
 type CrosswordEvents = {
-    cursorMoved : { cursor : Cursor, light : Light }
+    cursorMoved : { cursor : Cursor }
 }
 
 // A crossword where lights have identifiers of type L and cells have identifiers of type C.
@@ -151,6 +151,7 @@ class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
 
         let newLight = new Light(lid);
         this.lights.set(lid.toString(), newLight);
+        newLight.on('focus', (e) => this.emit('cursorMoved', { cursor: { light: e.light, index: e.index } }));
         return newLight;
     }
         
