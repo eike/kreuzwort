@@ -1,4 +1,4 @@
-import Crossword from './Crossword';
+import Crossword from './Crossword.js';
 
 export default class CurrentClue extends HTMLElement {
     connectedCallback() {

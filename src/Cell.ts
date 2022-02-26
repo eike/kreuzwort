@@ -1,4 +1,5 @@
-import Crossword, { mod } from './Crossword';
+import Crossword, { mod } from './Crossword.js';
+import Lid from './Lid.js';
 
 enum PositionInCell {
     Center,

@@ -1,4 +1,5 @@
-import Crossword, { Light } from "./Crossword";
+import Crossword, { Light } from "./Crossword.js";
+import Lid from "./Lid.js";
 
 export default class Ref extends HTMLElement {
     refInner: HTMLSpanElement;
@@ -8,7 +9,7 @@ export default class Ref extends HTMLElement {
         let shadow = this.attachShadow({mode: "closed"});
         shadow.appendChild(document.createElement('slot'));
         let refOuter = document.createElement('span');
-        refOuter.appendChild(document.createTextNode(" (\u261e "));
+        refOuter.appendChild(document.createTextNode(" (\u261e\u00a0"));
         this.refInner = document.createElement('span');
         refOuter.appendChild(this.refInner);
         refOuter.appendChild(document.createTextNode(")"));
@@ -16,7 +17,7 @@ export default class Ref extends HTMLElement {
     }
 
     connectedCallback() {
-        let crossword = this.closest('kw-crossword') as Crossword<Element>;
+        let crossword = this.closest('kw-crossword') as Crossword<any>;
 
         let light = crossword.lights.get(this.getAttribute('light') || '');
         if (light) {

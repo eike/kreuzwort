@@ -1,5 +1,6 @@
-import Crossword from './Crossword';
-import Cell from './Cell';
+import Crossword from './Crossword.js';
+import Cell from './Cell.js';
+import Lid from './Lid.js';
 
 export default class Grid extends HTMLElement {
     constructor() {
