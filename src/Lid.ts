@@ -1,4 +1,4 @@
-class Lid {
+export default class Lid {
     lightType : string;
     lightStart : string;
 
@@ -19,30 +19,5 @@ class Lid {
     
     equals(lid: Lid) {
         return lid.toString() === this.toString();
-    }
-}
-
-class LidMap<V> {
-    #map : Map<string, V>;
-
-    constructor(public defaultFactory? : () => V) {
-        this.#map = new Map();
-    }
-
-    public get(key : Lid) : V | undefined {
-        let val = this.#map.get(key.toString());
-        if (val) return val;
-
-        if (this.defaultFactory) {
-            let newVal = this.defaultFactory();
-            this.#map.set(key.toString(), newVal);
-            return newVal;
-        }
-
-        return undefined;
-    }
-
-    public set(key : Lid, val : V) {
-        this.#map.set(key.toString(), val);
     }
 }
