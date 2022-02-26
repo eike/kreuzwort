@@ -1,17 +1,16 @@
-import Crossword, { mod } from "./Crossword";
+import Crossword, { mod } from "./Crossword.js";
+import Lid from "./Lid.js";
 
 export default class Clue extends HTMLElement {
-    lightDiv : HTMLDivElement;
-    input : HTMLInputElement;
-    focusFromLightFocus : boolean = false;
+    lightDiv: HTMLDivElement;
+    clearDiv: HTMLDivElement;
 
     constructor() {
         super();
         let shadow = this.attachShadow({ mode: 'closed', delegatesFocus: true });
         let style = document.createElement('style');
         style.textContent = `
-            input { opacity: 0; position: absolute; left: -1000px; }
-            div.light { float: right; display: table-row; border-collapse: collapse; margin: 2px; }
+            div.light { display: var(--light-preview-display, table-row); float: right; border-collapse: collapse; margin: 2px; }
             div.light.current-light {
                 background-color: var(--current-light);
             }
@@ -21,23 +20,23 @@ export default class Clue extends HTMLElement {
             }
             .clear { cursor: pointer; }
             .clear::after { content: ''; display: block; clear: right; height: 0; }
+            .current-clue { outline: 1px solid red; }
             `;
         shadow.appendChild(style);
-        let clearDiv = document.createElement('div');
-        clearDiv.appendChild(document.createElement('slot'));
-        this.input = document.createElement('input');
-        clearDiv.appendChild(this.input);
+        this.clearDiv = document.createElement('div');
+        this.clearDiv.appendChild(document.createElement('slot'));
         this.lightDiv = document.createElement('div');
         this.lightDiv.className = 'light';
-        clearDiv.appendChild(this.lightDiv);
-        clearDiv.className = "clear";
-        shadow.appendChild(clearDiv);
+        this.clearDiv.appendChild(this.lightDiv);
+        this.clearDiv.className = "clear";
+        shadow.appendChild(this.clearDiv);
     }
 
     connectedCallback() {
-        let crossword = this.closest('kw-crossword') as Crossword<Element>;
+        let crossword = this.closest('kw-crossword') as Crossword<any>;
 
         crossword.getLight(this.lid).clue = this;
+        crossword.chainLight(this.lid);
         this.updateLightDiv();
 
         crossword.getLight(this.lid).on('contentChanged', this.updateLightDiv.bind(this));
@@ -45,28 +44,20 @@ export default class Clue extends HTMLElement {
             for (let span of this.lightDiv.children) {
                 span.classList.remove('cursor-before');
             }
-            this.focusFromLightFocus = true;
-            this.focus({preventScroll: true});
             this.lightDiv.classList.add('current-light');
+            this.clearDiv.classList.add('current-clue');
             this.lightDiv.children.item(mod(e.index, e.light.length))?.classList.add('cursor-before');
         });
         crossword.getLight(this.lid).on('blur', (e) => {
+            this.clearDiv.classList.remove('current-clue');
             this.lightDiv.classList.remove('current-light');
             for (let span of this.lightDiv.children) {
                 span.classList.remove('cursor-before');
             }
-            this.blur();
-        });
- 
-        this.addEventListener('focus', (e) => {
-            if (!this.focusFromLightFocus) {
-                crossword.setCursor(this.lid);
-            }
-            this.focusFromLightFocus = false;
         });
 
-        this.addEventListener('blur', (e) => {
-            crossword.setCursor(null);
+        this.addEventListener('click', (e) => {
+            crossword.setCursor(this.lid);
         });
     }
 
@@ -82,7 +73,7 @@ export default class Clue extends HTMLElement {
 
     get lid() {
         return new Lid(this.getAttribute('light-type') || "", this.getAttribute('light-start') || "");
-    }
+        }
 
     test() {
         this.input.focus({preventScroll: true});
