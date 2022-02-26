@@ -1,10 +1,9 @@
-import Crossword from './Crossword';
-import Cell from './Cell';
-import Grid from './Grid';
-import Clue from './Clue';
-import BoxClue from './BoxClue';
-import CurrentClue from './CurrentClue';
-import Ref from './Ref';
+import Crossword from './Crossword.js';
+import Cell from './Cell.js';
+import Grid from './Grid.js';
+import Clue from './Clue.js';
+import CurrentClue from './CurrentClue.js';
+import Ref from './Ref.js';
 
 customElements.define('kw-crossword', Crossword);
 customElements.define('kw-c', Cell);

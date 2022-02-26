@@ -72,11 +72,35 @@ export default class Clue extends HTMLElement {
     }
 
     get lid() {
-        return new Lid(this.getAttribute('light-type') || "", this.getAttribute('light-start') || "");
+        var lid;
+        if (lid = this.getAttribute('light')) {
+            return new Lid(lid);
         }
+        var type, start;
+        if ((type = this.getAttribute('light-type')) && (start = this.getAttribute('light-start'))) {
+            return new Lid(type, start);
+        }
+        var direction;
+        if (direction = this.getAttribute('light-direction')) {
+            let column = Array.prototype.indexOf.call(this.parentElement?.parentElement?.children, this.parentElement);
+            let row = Array.prototype.indexOf.call(this.parentElement?.parentElement?.parentElement?.children, this.parentElement?.parentElement);
 
-    test() {
-        this.input.focus({preventScroll: true});
+            switch (direction) {
+                case 'bottom-down':
+                    return new Lid('down', `(${row + 1},${column})`);
+                case 'right-across':
+                    return new Lid('across', `(${row},${column + 1})`);
+                case 'left-down':
+                    return new Lid('down', `(${row},${column - 1})`);
+                case 'right-down':
+                    return new Lid('down', `(${row},${column + 1})`);
+                case 'top-across':
+                    return new Lid('across', `(${row - 1},${column})`);
+                case 'bottom-across':
+                    return new Lid('across', `(${row + 1},${column})`);
+            };
+        }
+        throw Error('Clue has no light attached.');
     }
 }
 
