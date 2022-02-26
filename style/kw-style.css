@@ -6,20 +6,14 @@
     --current-light: #ffe7a3;
     --cursor-color: orange;
     --cursor-width: 3px;
-
-    font: 16px/22px Palatino;
+    --light-font: 18px sans-serif;
+    --light-number-font: 12px sans-serif;
+    --clue-number-font: bold 15px sans-serif;
+    --box-clue-font: 10px/10px Avenir;
 }
 
 kw-crossword {
     display: block;
-    width: 720px;
-    margin: 0 auto;
-}
-
-h2 {
-    font: bold 15px/22px Avenir;
-    margin: 22px 0 0;
-    text-transform: uppercase;
 }
 
 kw-current-clue {
@@ -30,17 +24,12 @@ kw-current-clue {
     padding: 3px;
 }
 
-kw-clue:focus {
-    background-color: var(--current-clue);
-}
-
 kw-grid {
     display: table;
+    table-layout: fixed;
     margin: 0 auto;
     border: 3px solid black;
     box-sizing: border-box;
-    --cell-content-offset-left: 0;
-    --cell-content-offset-top: 7px;
     --cell-inset: 0 0 0 0;
 }
 
@@ -55,10 +44,11 @@ kw-c, kw-b {
     width: var(--cell-width);
     height: var(--cell-height);
     max-width: var(--cell-width);
-    max-height: var(--cell-height);
-    font: 18px Avenir, sans-serif;
+    font: var(--light-font);
     text-align: center;
-    vertical-align: middle;
+    vertical-align: bottom;
+    padding-bottom: 3px;
+    box-sizing: border-box;
 }
 
 kw-b {
@@ -70,7 +60,7 @@ kw-c[number]::before {
     position: absolute;
     left: 2px;
     top: 0px;
-    font: 12px Avenir, sans-serif;
+    font: var(--light-number-font);
     color: gray;
     z-index: -1;
 }
@@ -87,11 +77,9 @@ kw-clue::before {
     display: block;
     position: absolute;
     left: 0;
-    width: 22px;/*
-    padding-right: 5px;
-    margin-right: -30px;*/
+    width: 22px;
     text-align: right;
-    font: bold 15px Avenir;
+    font: var(--clue-number-font);
     font-variant-numeric: tabular-nums;
 }
 
@@ -106,7 +94,7 @@ kw-grid.barred {
 
 kw-grid.barred kw-c {
     box-sizing: border-box;
-    padding: 1px 0 0 1px;
+    padding: 1px 0 4px 1px;
     box-shadow:
         1px 0 0 0 black, 
         0 1px 0 0 black, 
@@ -125,7 +113,8 @@ kw-grid.barred kw-c.across[number]::before {
 }
 
 kw-grid.barred kw-c[across] {
-    padding: 1px 2px 0 3px;
+    padding-left: 3px;
+    padding-right: 2px;
     --cell-inset: 1px 0 0 3px;
     box-shadow:
         1px 0 0 0 black, 
@@ -136,7 +125,7 @@ kw-grid.barred kw-c[across] {
 }
 
 kw-grid.barred kw-c[down] {
-    padding: 3px 0 0 1px;
+    padding-top: 3px;
     --cell-inset: 3px 0 0 1px;
     box-shadow:
         1px 0 0 0 black, 
@@ -147,7 +136,6 @@ kw-grid.barred kw-c[down] {
 }
 
 kw-grid.barred kw-c[across][down] {
-    padding: 3px 2px 0 3px;
     --cell-inset: 3px 0 0 3px;
     box-shadow:
         1px 0 0 0 black, 
@@ -163,17 +151,17 @@ kw-grid.barred kw-b {
 }
 
 kw-grid.swedish {
-    --cell-width: 50px;
-    --cell-height: 50px;
+    --cell-width: 44px;
+    --cell-height: 44px;
     --cell-inset: 1px 0 0 1px;
+    font-size: 24px;
     border: 3px solid black;
     border-width: 2px 3px 3px 2px;
     box-shadow: inset 1px 1px black;
 }
 
-kw-grid.swedish kw-c /*, kw-grid.swedish kw-c*/ {
-    font-size: 24px;
-    padding: 1px 0 0 1px;
+kw-grid.swedish kw-c {
+    padding: 1px 0 7px 1px;
     box-sizing: border-box;
 }
 
@@ -199,10 +187,11 @@ kw-grid.swedish kw-b {
     position: relative;
 }
 
-kw-grid.swedish kw-box-clue {
+kw-grid.swedish kw-clue {
+    --light-preview-display: none;
     display: grid;
     align-items: center;
-    font: 10px/10px Avenir;
+    font: var(--box-clue-font);
     height: var(--cell-height);
     text-align: left;
     position: absolute;
@@ -222,23 +211,18 @@ kw-grid.swedish kw-box-clue {
         1px 1px black;
 }
 
-kw-grid.swedish kw-box-clue:focus {
-    color: black;
-    background-color: var(--current-clue);
-}
-
-.swedish kw-box-clue:first-child:not(:only-child) {
+.swedish kw-clue:first-child:not(:only-child) {
     height: calc(var(--cell-height) / 2);
 }
 
-.swedish kw-box-clue:last-child:not(:only-child) {
+.swedish kw-clue:last-child:not(:only-child) {
     height: calc(var(--cell-height) / 2);
     top: auto;
     bottom: 0;
 }
 
 
-kw-box-clue[direction]::before, kw-box-clue[direction]::after {
+kw-clue[light-direction]::before, kw-clue[light-direction]::after {
     content: '';
     position: absolute;
     z-index: 1;
@@ -247,66 +231,67 @@ kw-box-clue[direction]::before, kw-box-clue[direction]::after {
     border-color: black;
 }
 
-kw-box-clue[direction=bottom-down]::after {
+kw-clue[light-direction=bottom-down]::after {
     top: calc(100% + 1px);
     left: calc(50% - 4px);
     border-width: 7px 4.5px 0 4.5px;
     border-color: var(--arrow-color, black) transparent transparent;
 }
 
-kw-box-clue[direction=right-across]::after {
+kw-clue[light-direction=right-across]::after {
     top: calc(50% - 4px);
     left: calc(100% + 1px);
     border-width: 4.5px 0 4.5px 7px;
     border-color: transparent transparent transparent var(--arrow-color, black);
 }
 
-kw-box-clue[direction=right-down]::after {
+kw-clue[light-direction=right-down]::after {
     top: 5px;
     left: calc(100% + 1px + var(--cell-width) / 2 - 5px);
     border-width: 7px 4.5px 0 4.5px;
     border-color: var(--arrow-color, black) transparent transparent;
 }
-kw-box-clue[direction=right-down]::before {
+kw-clue[light-direction=right-down]::before {
     top: 4px;
     left: calc(100% + 1px);
     width: calc(var(--cell-width) / 2 + 4px);
     border-top-width: 1px;
 }
 
-kw-box-clue[direction=left-down]::after {
+kw-clue[light-direction=left-down]::after {
     top: 5px;
     right: calc(100% + var(--cell-width) / 2 - 5px);
     border-width: 7px 4.5px 0 4.5px;
     border-color: var(--arrow-color, black) transparent transparent;
 }
-kw-box-clue[direction=left-down]::before {
+kw-clue[light-direction=left-down]::before {
     top: 4px;
     right: 100%;
+    left: auto;
     width: calc(var(--cell-width) / 2 + 4px);
     border-top-width: 1px;
 }
 
-kw-box-clue[direction=top-across]::after {
+kw-clue[light-direction=top-across]::after {
     left: 5px;
     bottom: calc(100% + var(--cell-height) / 2 - 5px);
     border-width: 4.5px 0 4.5px 7px;
     border-color: transparent transparent transparent var(--arrow-color, black) ;
 }
-kw-box-clue[direction=top-across]::before {
+kw-clue[light-direction=top-across]::before {
     left: 4px;
     border-left-width: 1px;
     height: calc(var(--cell-height) / 2 + 4px);
     bottom: 100%;
 }
 
-kw-box-clue[direction=bottom-across]::after {
+kw-clue[light-direction=bottom-across]::after {
     left: 5px;
     top: calc(100% + 1px + var(--cell-height) / 2 - 5px);
     border-width: 4.5px 0 4.5px 7px;
     border-color: transparent transparent transparent var(--arrow-color, black) ;
 }
-kw-box-clue[direction=bottom-across]::before {
+kw-clue[light-direction=bottom-across]::before {
     left: 4px;
     border-left: 1px solid black;
     height: calc(var(--cell-height) / 2 + 4px);
