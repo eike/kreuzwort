@@ -1,19 +1,39 @@
 import Crossword, { Light } from "./Crossword.js";
 import Lid from "./Lid.js";
 
+/**
+ * A Ref element is used for referencing other lights within a clue. It will
+ * show the contents of the referenced light.
+ * 
+ * The referenced contents can be styled with ::part(ref-contents).
+ */
 export default class Ref extends HTMLElement {
-    refInner: HTMLSpanElement;
+    refContent: HTMLSpanElement;
+
     constructor() {
         super();
 
         let shadow = this.attachShadow({mode: "closed"});
+
+        let style = document.createElement('style');
+        style.textContent = `
+        span > span {
+            display: inline-block;
+            width: 1.2em;
+            height: 1.2em;
+            text-align: center;
+            border: 1px solid black;
+        }
+        span > span:not(:last-child) {
+            border-right: none;
+        }
+        `;
+        shadow.appendChild(style);
+
         shadow.appendChild(document.createElement('slot'));
-        let refOuter = document.createElement('span');
-        refOuter.appendChild(document.createTextNode(" (\u261e\u00a0"));
-        this.refInner = document.createElement('span');
-        refOuter.appendChild(this.refInner);
-        refOuter.appendChild(document.createTextNode(")"));
-        shadow.appendChild(refOuter);
+        this.refContent = document.createElement('span');
+        this.refContent.setAttribute('part', "ref-contents");
+        shadow.appendChild(this.refContent);
     }
 
     connectedCallback() {
@@ -25,19 +45,18 @@ export default class Ref extends HTMLElement {
             light.on('contentChanged', this.updateInner.bind(this));
         }
 
-        this.refInner.addEventListener('click', (e) => {
+        this.refContent.addEventListener('click', (e) => {
             crossword.setCursor(this.lid);
         });
     }
 
     updateInner(light : Light) {
-        this.refInner.textContent = light.cellInfos.map(cellInfo => {
-            if (cellInfo.contents === "") {
-                return "_";
-            } else {
-                return cellInfo.contents;
-            }
-        }).join("");
+        this.refContent.textContent = '';
+        light.cellInfos.forEach(cellInfo => {
+            let cell = document.createElement('span');
+            cell.textContent = cellInfo.contents || "\u200d";
+            this.refContent.appendChild(cell);
+        });
     }
 
     get lid() : Lid {

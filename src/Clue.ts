@@ -2,34 +2,49 @@ import Crossword, { mod } from "./Crossword.js";
 import Lid from "./Lid.js";
 
 export default class Clue extends HTMLElement {
-    lightDiv: HTMLDivElement;
-    clearDiv: HTMLDivElement;
+    shadow: ShadowRoot;
+    lightPreview: HTMLDivElement;
+    focussedStyle: HTMLStyleElement;
 
     constructor() {
         super();
-        let shadow = this.attachShadow({ mode: 'closed', delegatesFocus: true });
+        this.shadow = this.attachShadow({ mode: 'closed', delegatesFocus: true });
         let style = document.createElement('style');
         style.textContent = `
-            div.light { display: var(--light-preview-display, table-row); float: right; border-collapse: collapse; margin: 2px; }
-            div.light.current-light {
+            .light-preview > span {
+                display: inline-block;
+                width: 1.2em;
+                height: 1.2em;
+                text-align: center;
+                border: 1px solid black;
+            }
+            .light-preview > span:not(:last-child) {
+                border-right: none;
+            }
+            .current-clue .light-preview {
                 background-color: var(--current-light);
             }
-            span { display: table-cell; border: 1px solid black; width: 17px; height: 17px; font: 14px/16px Avenir, sans-serif;text-align: center; }
-            span.cursor-before {
+            .light-preview span.cursor-before {
                 box-shadow: inset 2px 0 var(--cursor-color);
             }
-            .clear { cursor: pointer; }
-            .clear::after { content: ''; display: block; clear: right; height: 0; }
-            .current-clue { outline: 1px solid red; }
+            :host(kw-clue) {
+                cursor: pointer;
+            }
             `;
-        shadow.appendChild(style);
-        this.clearDiv = document.createElement('div');
-        this.clearDiv.appendChild(document.createElement('slot'));
-        this.lightDiv = document.createElement('div');
-        this.lightDiv.className = 'light';
-        this.clearDiv.appendChild(this.lightDiv);
-        this.clearDiv.className = "clear";
-        shadow.appendChild(this.clearDiv);
+        this.shadow.appendChild(style);
+
+        this.focussedStyle = document.createElement('style');
+        this.focussedStyle.textContent = `
+        :host(kw-clue) {
+            background: var(--current-clue-background) !important;
+            color: var(--current-clue-color) !important;
+        }
+        `;
+        this.shadow.appendChild(document.createElement('slot'));
+        this.lightPreview = document.createElement('div');
+        this.lightPreview.className = 'light-preview';
+        this.lightPreview.setAttribute('part', "light-preview");
+        this.shadow.appendChild(this.lightPreview);
     }
 
     connectedCallback() {
@@ -41,12 +56,11 @@ export default class Clue extends HTMLElement {
 
         crossword.getLight(this.lid).on('contentChanged', this.updateLightDiv.bind(this));
         crossword.getLight(this.lid).on('focus', (e) => {
-            for (let span of this.lightDiv.children) {
+            for (let span of this.lightPreview.children) {
                 span.classList.remove('cursor-before');
             }
-            this.lightDiv.classList.add('current-light');
-            this.clearDiv.classList.add('current-clue');
-            this.lightDiv.children.item(mod(e.index, e.light.length))?.classList.add('cursor-before');
+            this.shadow.appendChild(this.focussedStyle);
+            this.lightPreview.children.item(e.index)?.classList.add('cursor-before');
         });
         crossword.getLight(this.lid).on('blur', (e) => {
             this.clearDiv.classList.remove('current-clue');
@@ -54,6 +68,7 @@ export default class Clue extends HTMLElement {
             for (let span of this.lightDiv.children) {
                 span.classList.remove('cursor-before');
             }
+            this.focussedStyle.remove();
         });
 
         this.addEventListener('click', (e) => {
@@ -62,12 +77,14 @@ export default class Clue extends HTMLElement {
     }
 
     updateLightDiv() {
-        let crossword = this.closest('kw-crossword') as Crossword<Element>;
-        this.lightDiv.innerHTML = ""; // TODO: Is there a better way?
+        let crossword = this.closest('kw-crossword') as Crossword<any>;
+        this.lightPreview.textContent = "";
         for (let cellInfo of crossword.getLight(this.lid)?.cellInfos || []) {
             let span = document.createElement('span');
-            span.textContent = cellInfo.contents;
-            this.lightDiv.appendChild(span);
+            // Using a zero-width joiner (u200d) here is better because a space
+            // (or empty span) behaves differently from letters.
+            span.textContent = cellInfo.contents || "\u200d";
+            this.lightPreview.appendChild(span);
         }
     }
 
