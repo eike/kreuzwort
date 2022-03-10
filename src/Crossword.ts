@@ -100,6 +100,10 @@ function modIndex<T>(array: Array<T>, index: number) {
 
 type Cursor = { 
     light: Light, 
+    // Index should always be between 0 and light.length (inclusive)
+    // While index === light.length is functionally similar to
+    // index === 0, the cursor will be shown in a different position
+    // and behave differently when navigating using arrow keys.
     index: number,
 }
 
@@ -186,17 +190,26 @@ export default class Crossword<C> extends HTMLElement implements Emitter<Crosswo
                 let cellInfo = this.cursor.light.getCell(this.cursor.index - 1);
                 cellInfo.contents = "";
                 this.cursor.index--;
+                if (this.cursor.index < 0) { 
+                    this.cursor.index += this.cursor.light.length;
+                }
                 this.cursor.light.emit('focus', {
                     light: this.cursor.light,
                     index: this.cursor.index,
                     internalMove: true,
                 });
                 e.preventDefault();
-            } else if (e.key.length === 1) {
+            } else if (e.key === " ") {
+                // TODO
+            }
+            else if (e.key.length === 1) {
                 if (!this.cursor) return;
                 let cellInfo = this.cursor.light.getCell(this.cursor.index);
                 cellInfo.contents = e.key.toUpperCase();
                 this.cursor.index++;
+                if (this.cursor.index > this.cursor.light.length) {
+                    this.cursor.index -= this.cursor.light.length;
+                }
                 this.cursor.light.emit('focus', { light: this.cursor.light, index: this.cursor.index, internalMove: true });
                 e.preventDefault();
             }

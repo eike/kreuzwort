@@ -131,10 +131,10 @@ export default class Cell extends HTMLElement {
         this.crossword?.getLight(lid).on('focus', (e) => {
             this.background.classList.add('current-word');
             this.cursorDiv.classList.remove('before-across', 'before-down', 'after-across', 'after-down');
-            if (mod(e.index, e.light.length) === index) {
+            if (e.index === index) {
                 this.cursorDiv.classList.add(`before-${e.light.lid.lightType}`);
             }
-            if (mod(e.index, e.light.length) === 0 && index === e.light.length - 1) {
+            if (e.index === e.light.length && index === e.light.length - 1) {
                 this.cursorDiv.classList.add(`after-${e.light.lid.lightType}`);
             }
         });

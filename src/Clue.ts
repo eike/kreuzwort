@@ -1,4 +1,4 @@
-import Crossword, { mod } from "./Crossword.js";
+import Crossword from "./Crossword.js";
 import Lid from "./Lid.js";
 
 export default class Clue extends HTMLElement {
@@ -26,6 +26,9 @@ export default class Clue extends HTMLElement {
             }
             .light-preview span.cursor-before {
                 box-shadow: inset 2px 0 var(--cursor-color);
+            }
+            .light-preview span.cursor-after {
+                box-shadow: inset -2px 0 var(--cursor-color);
             }
             :host(kw-clue) {
                 cursor: pointer;
@@ -61,12 +64,13 @@ export default class Clue extends HTMLElement {
             }
             this.shadow.appendChild(this.focussedStyle);
             this.lightPreview.children.item(e.index)?.classList.add('cursor-before');
+            if (e.index === e.light.length) {
+                this.lightPreview.lastElementChild?.classList.add('cursor-after');
+            }
         });
         crossword.getLight(this.lid).on('blur', (e) => {
-            this.clearDiv.classList.remove('current-clue');
-            this.lightDiv.classList.remove('current-light');
-            for (let span of this.lightDiv.children) {
-                span.classList.remove('cursor-before');
+            for (let span of this.lightPreview.children) {
+                span.classList.remove('cursor-before', 'cursor-after');
             }
             this.focussedStyle.remove();
         });
