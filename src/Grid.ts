@@ -65,7 +65,7 @@ export default class Grid extends HTMLElement {
         let lights = getLights(grid.length, grid[0].length, "across", (i, j) => grid[i][j], (i, j) => `(${i},${j})`)
             .concat(getLights(grid[0].length, grid.length, "down", (i, j) => grid[j][i], (i, j) => `(${j},${i})`));
 
-        let crossword = this.closest('kw-crossword') as Crossword<Cell>;
+        let crossword = this.closest('kw-crossword') as Crossword<Lid, Cell>;
 
         for (let light of lights) {
             crossword.setCellsForLight(light.lid, light.cells);

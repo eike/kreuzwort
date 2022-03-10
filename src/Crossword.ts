@@ -1,9 +1,7 @@
-import Lid from "./Lid.js";
-
 type CellEvents = {
     contentChanged: string;
 }
-class CellInfo implements Emitter<CellEvents> {
+export class CellInfo implements Emitter<CellEvents> {
     _contents: string = "";
 
     get contents() { return this._contents; }
@@ -34,72 +32,17 @@ class CellInfo implements Emitter<CellEvents> {
 
 
 type LightEvents = {
-    contentChanged: Light;
-    focus: { light: Light, index: number, internalMove: boolean };
-    blur: { light: Light };
-}
-
-export class Light implements Emitter<LightEvents> {
-    #cellInfos: CellInfo[] = [];
-    clue: Element | null = null;
-    #lid: Lid;
-    nextLight: Light | null = null;
-    previousLight: Light | null = null;
-
-    constructor(lid: Lid) {
-        this.#lid = lid;
-    }
-
-    public set cellInfos(cellInfos: CellInfo[]) {
-        this.#cellInfos = cellInfos;
-
-        for (let cellInfo of cellInfos) {
-            cellInfo.on('contentChanged', this.cellChanged.bind(this));
-        }
-    }
-
-    public get cellInfos() { return this.#cellInfos; }
-
-    public get length() { return this.#cellInfos.length; }
-
-    public get lid() { return this.#lid; }
-
-    public getCell(index: number): CellInfo {
-        return modIndex(this.#cellInfos, index);
-    }
-
-    public cellChanged(newContent: string) {
-        this.emit('contentChanged', this);
-    }
-    
-    listeners: { [K in keyof LightEvents]: Array<any>; } = {
-        contentChanged: [],
-        focus: [],
-        blur: [],
-    };
-    on<K extends EventKey<LightEvents>>(key: K, fn: EventReceiver<LightEvents[K]>) {
-        this.listeners[key].push(fn);
-    }
-    off<K extends EventKey<LightEvents>>(key: K, fn: EventReceiver<LightEvents[K]>) {
-        this.listeners[key] = this.listeners[key].filter(f => f !== fn);
-    }
-    emit<K extends EventKey<LightEvents>>(key: K, params: LightEvents[K]) {
-        this.listeners[key].forEach(fn => {
-            fn(params);
-        });
-    }
+    contentChanged: { newContent: Array<CellInfo> };
+    focus: { index: number, lightLength: number, internalMove: boolean };
+    blur: {};
 }
 
 export function mod(a: number, m: number): number {
     return (a % m + m) % m;
 }
 
-function modIndex<T>(array: Array<T>, index: number) {
-    return array[mod(index, array.length)];
-}
-
-type Cursor = { 
-    light: Light, 
+type Cursor<L extends ILid> = {
+    lid: L,
     // Index should always be between 0 and light.length (inclusive)
     // While index === light.length is functionally similar to
     // index === 0, the cursor will be shown in a different position
@@ -107,8 +50,9 @@ type Cursor = {
     index: number,
 }
 
-type CrosswordEvents = {
-    cursorMoved: { cursor: Cursor },
+type CrosswordEvents<L extends ILid> = {
+    cursorMoved: { cursor: Cursor<L> },
+    directionalMove: { direction: 'Up' | 'Right' | 'Down' | 'Left' },
 }
 
 // This is an unfortunate hack. It is due to the following two conflicting
@@ -130,24 +74,39 @@ var globalForm: {
     prevInput: HTMLInputElement,
     input: HTMLInputElement,
     nextInput: HTMLInputElement,
-    currentCrossword: Crossword<any> | null
+    currentCrossword: Crossword<any, any> | null
 } | null = null;
 
+type InternalLid = string;
+
+interface ILid {
+    toInternalLid(): InternalLid;
+    equals(lid: ILid): boolean;
+}
+
 // A crossword where lights have identifiers of type L and cells have identifiers of type C.
-export default class Crossword<C> extends HTMLElement implements Emitter<CrosswordEvents> {
-    lights: Map<string, Light>;
-    cells: Map<C, CellInfo>;
-    cursor: Cursor | null;
-    endLights: { first: Light, last: Light } | null;
-    mostRecentLight: Light | null;
+export default class Crossword<L extends ILid, C> extends HTMLElement implements Emitter<CrosswordEvents<L>> {
+    #lights: Set<InternalLid>;
+    #clues: Map<InternalLid | undefined, L>;
+    #cellsForLight: Map<InternalLid | undefined, Array<C>>;
+    cellInfos: Map<C, CellInfo>;
+    #nextInClueOrder: Map<InternalLid | undefined, L>;
+    #prevInClueOrder: Map<InternalLid | undefined, L>;
+    #endLights: { first: L, last: L } | null;
+    #cursor: Cursor<L> | null;
+    #mostRecentLight: L | null;
 
     constructor() {
         super();
-        this.lights = new Map();
-        this.cells = new Map();
-        this.cursor = null;
-        this.endLights = null;
-        this.mostRecentLight = null;
+        this.#lights = new Set();
+        this.cellInfos = new Map();
+        this.#cursor = null;
+        this.#endLights = null;
+        this.#nextInClueOrder = new Map();
+        this.#prevInClueOrder = new Map();
+        this.#clues = new Map();
+        this.#cellsForLight = new Map();
+        this.#mostRecentLight = null;
 
         let shadow = this.attachShadow({ mode: 'closed' });
 
@@ -186,143 +145,197 @@ export default class Crossword<C> extends HTMLElement implements Emitter<Crosswo
         globalForm.input.addEventListener('keydown', (e) => {
             if (globalForm?.currentCrossword !== this) return;
             if (e.key === 'Backspace') {
-                if (!this.cursor) return;
-                let cellInfo = this.cursor.light.getCell(this.cursor.index - 1);
+                if (!this.#cursor) return;
+                let cell = this.#cellsForLight.get(this.#cursor.lid.toInternalLid())?.[this.#cursor.index - 1];
+                if (!cell) return;
+                let cellInfo = this.getOrAddCell(cell);
                 cellInfo.contents = "";
-                this.cursor.index--;
-                if (this.cursor.index < 0) { 
-                    this.cursor.index += this.cursor.light.length;
+                this.#cursor.index--;
+                let lightLength = this.getLightLength(this.#cursor.lid);
+                if (this.#cursor.index < 0) {
+                    this.#cursor.index += lightLength;
                 }
-                this.cursor.light.emit('focus', {
-                    light: this.cursor.light,
-                    index: this.cursor.index,
+                this.emitLight(this.#cursor.lid, 'focus', {
+                    index: this.#cursor.index,
+                    lightLength,
                     internalMove: true,
                 });
                 e.preventDefault();
             } else if (e.key === " ") {
                 // TODO
-            }
-            else if (e.key.length === 1) {
-                if (!this.cursor) return;
-                let cellInfo = this.cursor.light.getCell(this.cursor.index);
+            } else if (e.key.length === 1) {
+                if (!this.#cursor) return;
+                let lightLength = this.getLightLength(this.#cursor.lid);
+
+                let cell = this.#cellsForLight.get(this.#cursor.lid.toInternalLid())?.[this.#cursor.index % lightLength];
+                if (!cell) return;
+                let cellInfo = this.getOrAddCell(cell);
                 cellInfo.contents = e.key.toUpperCase();
-                this.cursor.index++;
-                if (this.cursor.index > this.cursor.light.length) {
-                    this.cursor.index -= this.cursor.light.length;
+                this.#cursor.index++;
+                if (this.#cursor.index > lightLength) {
+                    this.#cursor.index -= lightLength;
                 }
-                this.cursor.light.emit('focus', { light: this.cursor.light, index: this.cursor.index, internalMove: true });
+                this.emitLight(this.#cursor.lid, 'focus', {
+                    index: this.#cursor.index,
+                    lightLength,
+                    internalMove: true,
+                });
                 e.preventDefault();
             }
         });
 
         globalForm.input.addEventListener('blur', (e) => {
             if (globalForm?.currentCrossword !== this) return;
-            this.mostRecentLight = this.cursor?.light ?? null;
+            this.#mostRecentLight = this.#cursor?.lid ?? null;
             this.setCursor(null);
         });
 
         globalForm.nextInput.addEventListener('focus', (e) => {
             if (globalForm?.currentCrossword !== this) return;
-            if (!this.mostRecentLight) return;
-            this.setCursor(this.mostRecentLight.nextLight?.lid ?? null);
+            if (!this.#mostRecentLight) return;
+            this.setCursor(this.#nextInClueOrder.get(this.#mostRecentLight?.toInternalLid()) ?? null);
         });
         globalForm.prevInput.addEventListener('focus', (e) => {
             if (globalForm?.currentCrossword !== this) return;
-            if (!this.mostRecentLight) return;
-            this.setCursor(this.mostRecentLight.previousLight?.lid ?? null);
+            if (!this.#mostRecentLight) return;
+            this.setCursor(this.#prevInClueOrder.get(this.#mostRecentLight?.toInternalLid()) ?? null);
         });
     }
 
-    public setCellsForLight(lid: Lid, cells: C[]) {
-        let light = this.getLight(lid);
+    public setCellsForLight(lid: L, cells: C[]) {
+        this.registerLight(lid);
+        this.#cellsForLight.set(lid.toInternalLid(), cells);
         let cellInfos = cells.map((cell) => this.getOrAddCell(cell));
-        light.cellInfos = cellInfos;
+        for (let cellInfo of cellInfos) {
+            cellInfo.on('contentChanged', (e) => {
+                this.emitLight(lid, 'contentChanged', {
+                    newContent: this.getLightContents(lid)
+                });
+            });
+        }
+        this.emitLight(lid, 'contentChanged', { newContent: this.getLightContents(lid) });
     }
 
-    public getLight(lid: Lid): Light {
-        let light = this.lights.get(lid.toString());
-        if (light) return light;
+    public setClueForLight(lid: L, clue: any) {
+        this.registerLight(lid);
+        this.#clues.set(lid.toInternalLid(), clue);
+    }
 
-        let newLight = new Light(lid);
-        this.lights.set(lid.toString(), newLight);
-        newLight.on('focus', (e) => {
-            this.emit('cursorMoved', { cursor: { light: e.light, index: e.index } })
+    getLightContents(lid: L): Array<CellInfo> {
+        return (this.#cellsForLight.get(lid.toInternalLid()) || []).map((c) => this.getOrAddCell(c));
+    }
+
+    getClueForLight(lid: L): any {
+        return this.#clues.get(lid.toInternalLid());
+    }
+
+    private registerLight(lid: L) {
+        if (this.#lights.has(lid.toInternalLid())) return;
+
+        this.#lights.add(lid.toInternalLid());
+        this.onLight(lid, 'focus', (e) => {
+            this.emit('cursorMoved', { cursor: { lid: lid, index: e.index } })
             globalForm?.input.focus();
             if (globalForm) globalForm.currentCrossword = this;
         });
-        return newLight;
     }
-        
+
     public getOrAddCell(cell: C): CellInfo {
-        var cellInfo = this.cells.get(cell);
+        var cellInfo = this.cellInfos.get(cell);
         if (cellInfo !== undefined) {
             return cellInfo;
         } else {
             let cellInfo = new CellInfo();
-            this.cells.set(cell, cellInfo);
+            this.cellInfos.set(cell, cellInfo);
             return cellInfo;
         }
     }
 
-    public chainLight(lid: Lid) {
-        let light = this.getLight(lid);
-        if (!this.endLights) {
-            light.nextLight = light;
-            light.previousLight = light;
-            this.endLights = { first: light, last: light };
+    public getLightLength(lid: L): number {
+        return this.#cellsForLight.get(lid.toInternalLid())?.length ?? 0;
+    }
+
+    public chainLight(lid: L) {
+        this.registerLight(lid);
+
+        if (!this.#endLights) {
+            this.#nextInClueOrder.set(lid.toInternalLid(), lid);
+            this.#prevInClueOrder.set(lid.toInternalLid(), lid);
+            this.#endLights = { first: lid, last: lid };
             return;
         }
 
-        this.endLights.first.previousLight = light;
-        light.nextLight = this.endLights.first;
-        this.endLights.last.nextLight = light;
-        light.previousLight = this.endLights.last;
-        this.endLights.last = light;
+        this.#prevInClueOrder.set(this.#endLights.first.toInternalLid(), lid);
+        this.#nextInClueOrder.set(lid.toInternalLid(), this.#endLights.first);
+        this.#nextInClueOrder.set(this.#endLights.last.toInternalLid(), lid);
+        this.#prevInClueOrder.set(lid.toInternalLid(), this.#endLights.last);
+        this.#endLights.last = lid;
     }
 
-    public setCursor(lid: Lid | null, index?: number) {
+    public setCursor(lid: L | null, index?: number) {
+        //debugger
         var internalMove = false;
-        if (this.cursor) {
+        if (this.#cursor) {
             if (lid === null) {
-                this.cursor.light.emit('blur', { light: this.cursor.light });
+                this.emitLight(this.#cursor.lid, 'blur', {});
                 return;
             }
-            if (this.cursor.light.lid.equals(lid)) {
+            if (this.#cursor.lid.equals(lid)) {
                 internalMove = true;
             } else {
-                this.cursor.light.emit('blur', { light: this.cursor.light });
+                this.emitLight(this.#cursor.lid, 'blur', {});
             }
         }
 
         if (lid === null) return;
-        let light = this.getLight(lid);
         if (index === undefined) {
-            index = 0;
-            for (var i = 0; i < light.cellInfos.length; i++) {
-                if (!light.cellInfos[i].isPennedIn()) {
+            index = this.getLightLength(lid);
+            let contents = this.getLightContents(lid);
+            contents.every((cellInfo, i) => {
+                if (!cellInfo.isPennedIn()) {
                     index = i;
-                    break;
+                    return false;
                 }
-            }
+                return true;
+            });
         }
 
-        this.cursor = { light, index };
-        this.cursor.light.emit('focus', { light, index, internalMove });
+        this.#cursor = { lid, index };
+        this.emitLight(this.#cursor.lid, 'focus', { index, internalMove, lightLength: this.getLightLength(lid) });
     }
 
-    listeners: { [K in keyof CrosswordEvents]: Array<any>; } = {
+    listeners: { [K in keyof CrosswordEvents<L>]: Array<any>; } = {
         cursorMoved: [],
         directionalMove: [],
     };
-    on<K extends EventKey<CrosswordEvents>>(key: K, fn: EventReceiver<CrosswordEvents[K]>) {
+    on<K extends EventKey<CrosswordEvents<L>>>(key: K, fn: EventReceiver<CrosswordEvents<L>[K]>) {
         this.listeners[key].push(fn);
     }
-    off<K extends EventKey<CrosswordEvents>>(key: K, fn: EventReceiver<CrosswordEvents[K]>) {
+    off<K extends EventKey<CrosswordEvents<L>>>(key: K, fn: EventReceiver<CrosswordEvents<L>[K]>) {
         this.listeners[key] = this.listeners[key].filter(f => f !== fn);
     }
-    emit<K extends EventKey<CrosswordEvents>>(key: K, params: CrosswordEvents[K]) {
+    emit<K extends EventKey<CrosswordEvents<L>>>(key: K, params: CrosswordEvents<L>[K]) {
         this.listeners[key].forEach(fn => {
             fn(params);
         });
+    }
+
+    #lightListeners: { [K in keyof LightEvents]: Map<InternalLid, Array<any>>; } = {
+        contentChanged: new Map(),
+        focus: new Map(),
+        blur: new Map(),
+    };
+
+    onLight<K extends EventKey<LightEvents>>(lid: L, key: K, fn: (params: LightEvents[K], lid: L) => void) {
+        var listeners = this.#lightListeners[key].get(lid.toInternalLid());
+        if (!listeners) {
+            listeners = [];
+            this.#lightListeners[key].set(lid.toInternalLid(), listeners);
+        }
+        listeners.push(fn);
+    }
+
+    emitLight<K extends EventKey<LightEvents>>(lid: L, key: K, params: LightEvents[K]) {
+        this.#lightListeners[key].get(lid.toInternalLid())?.forEach((fn) => fn(params, lid));
     }
 }

@@ -13,11 +13,11 @@ export default class Lid {
         }
     }
 
-    toString() {
+    toInternalLid() {
         return `${this.lightStart}-${this.lightType}`;
     }
     
     equals(lid: Lid) {
-        return lid.toString() === this.toString();
+        return lid.toInternalLid() === this.toInternalLid();
     }
 }

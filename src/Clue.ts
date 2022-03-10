@@ -51,24 +51,24 @@ export default class Clue extends HTMLElement {
     }
 
     connectedCallback() {
-        let crossword = this.closest('kw-crossword') as Crossword<any>;
+        let crossword = this.closest('kw-crossword') as Crossword<Lid, any>;
 
-        crossword.getLight(this.lid).clue = this;
+        crossword.setClueForLight(this.lid, this);
         crossword.chainLight(this.lid);
         this.updateLightDiv();
 
-        crossword.getLight(this.lid).on('contentChanged', this.updateLightDiv.bind(this));
-        crossword.getLight(this.lid).on('focus', (e) => {
+        crossword.onLight(this.lid, 'contentChanged', this.updateLightDiv.bind(this));
+        crossword.onLight(this.lid, 'focus', (e) => {
             for (let span of this.lightPreview.children) {
                 span.classList.remove('cursor-before');
             }
             this.shadow.appendChild(this.focussedStyle);
             this.lightPreview.children.item(e.index)?.classList.add('cursor-before');
-            if (e.index === e.light.length) {
+            if (e.index === e.lightLength) {
                 this.lightPreview.lastElementChild?.classList.add('cursor-after');
             }
         });
-        crossword.getLight(this.lid).on('blur', (e) => {
+        crossword.onLight(this.lid, 'blur', (e) => {
             for (let span of this.lightPreview.children) {
                 span.classList.remove('cursor-before', 'cursor-after');
             }
@@ -81,13 +81,13 @@ export default class Clue extends HTMLElement {
     }
 
     updateLightDiv() {
-        let crossword = this.closest('kw-crossword') as Crossword<any>;
+        let crossword = this.closest('kw-crossword') as Crossword<Lid, any>;
         this.lightPreview.textContent = "";
-        for (let cellInfo of crossword.getLight(this.lid)?.cellInfos || []) {
+        for (let cellContent of crossword.getLightContents(this.lid)) {
             let span = document.createElement('span');
             // Using a zero-width joiner (u200d) here is better because a space
             // (or empty span) behaves differently from letters.
-            span.textContent = cellInfo.contents || "\u200d";
+            span.textContent = cellContent.contents || "\u200d";
             this.lightPreview.appendChild(span);
         }
     }

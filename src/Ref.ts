@@ -1,4 +1,4 @@
-import Crossword, { Light } from "./Crossword.js";
+import Crossword, { CellInfo } from "./Crossword.js";
 import Lid from "./Lid.js";
 
 /**
@@ -37,22 +37,19 @@ export default class Ref extends HTMLElement {
     }
 
     connectedCallback() {
-        let crossword = this.closest('kw-crossword') as Crossword<any>;
+        let crossword = this.closest('kw-crossword') as Crossword<Lid, any>;
 
-        let light = crossword.lights.get(this.getAttribute('light') || '');
-        if (light) {
-            this.updateInner(light);
-            light.on('contentChanged', this.updateInner.bind(this));
-        }
+        this.updateInner(crossword.getLightContents(this.lid));
+        crossword.onLight(this.lid, 'contentChanged', ({ newContent }) => this.updateInner(newContent));
 
         this.refContent.addEventListener('click', (e) => {
             crossword.setCursor(this.lid);
         });
     }
 
-    updateInner(light : Light) {
+    updateInner(contents : Array<CellInfo>) {
         this.refContent.textContent = '';
-        light.cellInfos.forEach(cellInfo => {
+        contents.forEach(cellInfo => {
             let cell = document.createElement('span');
             cell.textContent = cellInfo.contents || "\u200d";
             this.refContent.appendChild(cell);

@@ -1,4 +1,4 @@
-import Crossword, { mod } from './Crossword.js';
+import Crossword from './Crossword.js';
 import Lid from './Lid.js';
 
 enum PositionInCell {
@@ -15,7 +15,7 @@ export default class Cell extends HTMLElement {
     background : HTMLDivElement;
     cursorDiv: HTMLDivElement;
     #lights : Map<string, [ lid: Lid, index: number ]>; // light-type to lid
-    crossword: Crossword<Cell> | null;
+    crossword: Crossword<Lid, Cell> | null;
 
     constructor() {
         super();
@@ -87,7 +87,7 @@ export default class Cell extends HTMLElement {
         });
 
         this.addEventListener('click', (e) => {
-            let crossword = this.closest('kw-crossword') as Crossword<Cell>;
+            let crossword = this.closest('kw-crossword') as Crossword<Lid, Cell>;
             let positionInCell = this.positionInCell(e.offsetX, e.offsetY);
             var light;
             if (positionInCell === PositionInCell.Left && (light = this.#lights.get('across'))) {
@@ -106,10 +106,10 @@ export default class Cell extends HTMLElement {
     }
 
     connectedCallback(): void {
-        this.crossword = this.closest('kw-crossword') as Crossword<Cell>;
+        this.crossword = this.closest('kw-crossword') as Crossword<Lid, Cell>;
         this.crossword.getOrAddCell(this);
 
-        this.crossword?.cells.get(this)?.on('contentChanged', (newContent) => {
+        this.crossword?.cellInfos.get(this)?.on('contentChanged', (newContent) => {
             this.entry.textContent = newContent;
         });
     }
@@ -128,18 +128,18 @@ export default class Cell extends HTMLElement {
     public addLight(lid : Lid, index : number) {
         this.#lights.set(lid.lightType, [ lid, index ]);
 
-        this.crossword?.getLight(lid).on('focus', (e) => {
+        this.crossword?.onLight(lid, 'focus', (e) => {
             this.background.classList.add('current-word');
             this.cursorDiv.classList.remove('before-across', 'before-down', 'after-across', 'after-down');
             if (e.index === index) {
-                this.cursorDiv.classList.add(`before-${e.light.lid.lightType}`);
+                this.cursorDiv.classList.add(`before-${lid.lightType}`);
             }
-            if (e.index === e.light.length && index === e.light.length - 1) {
-                this.cursorDiv.classList.add(`after-${e.light.lid.lightType}`);
+            if (e.index === e.lightLength && index === e.lightLength - 1) {
+                this.cursorDiv.classList.add(`after-${lid.lightType}`);
             }
         });
 
-        this.crossword?.getLight(lid).on('blur', (e) => {
+        this.crossword?.onLight(lid, 'blur', (e) => {
             this.background.classList.remove('current-word')
             this.cursorDiv.classList.remove('before-across', 'before-down', 'after-across', 'after-down');
         });
