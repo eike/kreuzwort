@@ -53,6 +53,7 @@ type Cursor<L extends ILid> = {
 type CrosswordEvents<L extends ILid> = {
     cursorMoved: { cursor: Cursor<L> },
     directionalMove: { direction: 'Up' | 'Right' | 'Down' | 'Left' },
+    switchDirection: {},
 }
 
 // This is an unfortunate hack. It is due to the following two conflicting
@@ -161,8 +162,10 @@ export default class Crossword<L extends ILid, C> extends HTMLElement implements
                     internalMove: true,
                 });
                 e.preventDefault();
+            } else if (e.key.startsWith('Arrow')) {
+                this.emit('directionalMove', { direction: e.key.substring(5) as 'Up' | 'Left' | 'Down' | 'Right' });
             } else if (e.key === " ") {
-                // TODO
+                this.emit('switchDirection', {});
             } else if (e.key.length === 1) {
                 if (!this.#cursor) return;
                 let lightLength = this.getLightLength(this.#cursor.lid);
@@ -304,9 +307,26 @@ export default class Crossword<L extends ILid, C> extends HTMLElement implements
         this.emitLight(this.#cursor.lid, 'focus', { index, internalMove, lightLength: this.getLightLength(lid) });
     }
 
+    get cursor(): Cursor<L> | null {
+        return this.#cursor;
+    }
+
+    get currentCell(): { cell: C, after: boolean } | null {
+        if (!this.cursor) return null;
+
+        let cells = this.#cellsForLight.get(this.cursor.lid.toInternalLid());
+        if (!cells) return null;
+        if (this.cursor.index === cells.length) {
+            return { cell: cells[cells.length - 1], after: true };
+        } else {
+            return { cell: cells[this.cursor.index], after: false };
+        }
+    }
+
     listeners: { [K in keyof CrosswordEvents<L>]: Array<any>; } = {
         cursorMoved: [],
         directionalMove: [],
+        switchDirection: [],
     };
     on<K extends EventKey<CrosswordEvents<L>>>(key: K, fn: EventReceiver<CrosswordEvents<L>[K]>) {
         this.listeners[key].push(fn);

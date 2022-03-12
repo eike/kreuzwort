@@ -1,4 +1,5 @@
 import Crossword from './Crossword.js';
+import GridElement from './GridElement.js';
 import Lid from './Lid.js';
 
 enum PositionInCell {
@@ -9,17 +10,17 @@ enum PositionInCell {
     Left,
 }
 
-export default class Cell extends HTMLElement {
+export default class Cell extends GridElement {
     shadow : ShadowRoot;
     entry : HTMLSpanElement;
     background : HTMLDivElement;
     cursorDiv: HTMLDivElement;
-    #lights : Map<string, [ lid: Lid, index: number ]>; // light-type to lid
+    lights : Map<string, { lid: Lid, index: number, isFinal: boolean }>; // light-type to lid
     crossword: Crossword<Lid, Cell> | null;
 
     constructor() {
         super();
-        this.#lights = new Map();
+        this.lights = new Map();
         this.crossword = null;
 
         this.shadow = this.attachShadow({ mode: 'closed' });
@@ -77,32 +78,49 @@ export default class Cell extends HTMLElement {
                     break;
                 case PositionInCell.Left:
                 case PositionInCell.Right:
-                    if (this.#lights.has('across')) this.cursorDiv.classList.add('across');
+                    if (this.lights.has('across')) this.cursorDiv.classList.add('across');
                     break;
                 case PositionInCell.Top:
                 case PositionInCell.Bottom:
-                    if (this.#lights.has('down')) this.cursorDiv.classList.add('down');
+                    if (this.lights.has('down')) this.cursorDiv.classList.add('down');
                     break;
             }
         });
 
         this.addEventListener('click', (e) => {
-            let crossword = this.closest('kw-crossword') as Crossword<Lid, Cell>;
             let positionInCell = this.positionInCell(e.offsetX, e.offsetY);
-            var light;
-            if (positionInCell === PositionInCell.Left && (light = this.#lights.get('across'))) {
-                crossword.setCursor(light[0], light[1]);
-            } else if (positionInCell === PositionInCell.Right && (light = this.#lights.get('across'))) {
-                crossword.setCursor(light[0], light[1] + 1);
-            } else if (positionInCell === PositionInCell.Top && (light = this.#lights.get('down'))) {
-                crossword.setCursor(light[0], light[1]);
-            } else if (positionInCell === PositionInCell.Bottom && (light = this.#lights.get('down'))) {
-                crossword.setCursor(light[0], light[1]+ 1);
-            } else if (light = this.#lights.values().next().value) {
-                // TODO: Implement some form of toggling.
-                crossword.setCursor(light[0], light[1]);
+            if (this.setCursor(positionInCell)) return;
+            let crossword = this.closest('kw-crossword') as Crossword<Lid, Cell>;
+            // TODO: Implement some form of toggling.
+            let light = this.lights.values().next().value;
+            if (light) {
+                crossword.setCursor(light.lid, light.index);
             }
         });
+    }
+
+    /**
+     * Sets the cursor at the indicated position in the cell if that is a valid position
+     * for a cursor (i.e. there is a light passing through in the corresponding)
+     * direction. Returns true if the position is valid, false otherwise.
+     */
+    setCursor(position: PositionInCell): boolean {
+        let crossword = this.closest('kw-crossword') as Crossword<Lid, Cell>;
+        var light;
+        if (position === PositionInCell.Left && (light = this.lights.get('across'))) {
+            crossword.setCursor(light.lid, light.index);
+            return true;
+        } else if (position === PositionInCell.Right && (light = this.lights.get('across'))) {
+            crossword.setCursor(light.lid, light.index + 1);
+            return true;
+        } else if (position === PositionInCell.Top && (light = this.lights.get('down'))) {
+            crossword.setCursor(light.lid, light.index);
+            return true;
+        } else if (position === PositionInCell.Bottom && (light = this.lights.get('down'))) {
+            crossword.setCursor(light.lid, light.index + 1);
+            return true;
+        }
+        return false;
     }
 
     connectedCallback(): void {
@@ -126,7 +144,7 @@ export default class Cell extends HTMLElement {
     }
 
     public addLight(lid : Lid, index : number) {
-        this.#lights.set(lid.lightType, [ lid, index ]);
+        this.lights.set(lid.lightType, { lid, index, isFinal: false });
 
         this.crossword?.onLight(lid, 'focus', (e) => {
             this.background.classList.add('current-word');

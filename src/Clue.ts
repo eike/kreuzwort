@@ -1,4 +1,5 @@
 import Crossword from "./Crossword.js";
+import GridElement from "./GridElement.js";
 import Lid from "./Lid.js";
 
 export default class Clue extends HTMLElement {
@@ -103,8 +104,8 @@ export default class Clue extends HTMLElement {
         }
         var direction;
         if (direction = this.getAttribute('light-direction')) {
-            let column = Array.prototype.indexOf.call(this.parentElement?.parentElement?.children, this.parentElement);
-            let row = Array.prototype.indexOf.call(this.parentElement?.parentElement?.parentElement?.children, this.parentElement?.parentElement);
+            let column = (this.parentElement as GridElement).column;
+            let row = (this.parentElement as GridElement).row;
 
             switch (direction) {
                 case 'bottom-down':
