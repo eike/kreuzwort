@@ -116,8 +116,8 @@ export default class Crossword<L extends ILid, C> extends HTMLElement implements
         form {
             position: fixed;
             top: 40%;
-            left: 0px;
-            opacity: 5%;
+            left: -200px;
+            width: 100px;
         }
         input {
             display: block;

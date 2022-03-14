@@ -47,7 +47,7 @@ export default class Clue extends HTMLElement {
         this.shadow.appendChild(document.createElement('slot'));
         this.lightPreview = document.createElement('div');
         this.lightPreview.className = 'light-preview';
-        this.lightPreview.setAttribute('part', "light-preview");
+        this.lightPreview.setAttribute('part', "light-contents");
         this.shadow.appendChild(this.lightPreview);
     }
 

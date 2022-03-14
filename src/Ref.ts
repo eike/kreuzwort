@@ -32,7 +32,7 @@ export default class Ref extends HTMLElement {
 
         shadow.appendChild(document.createElement('slot'));
         this.refContent = document.createElement('span');
-        this.refContent.setAttribute('part', "ref-contents");
+        this.refContent.setAttribute('part', "light-contents");
         shadow.appendChild(this.refContent);
     }
 

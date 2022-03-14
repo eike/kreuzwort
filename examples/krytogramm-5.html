@@ -2,15 +2,12 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
         <title>Kryptogramm 5</title>
+        <link rel="stylesheet" href="style.css">
         <link rel="stylesheet" href="kw-style.css">
         <script src="../dist/kreuzwort.js" type="module"></script>
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                window.crossword = document.getElementById('kryptogramm-5');
-            });
-        </script>
     </head>
     <body>
+        <main>
         <kw-crossword id="kryptogramm-5">
             <h1>Kryptogramm 5</h1>
             <kw-grid id="grid">
@@ -275,6 +272,7 @@
                 Klicken Sie in das Gitter, um das Rätsel zu beginnen.
             </kw-current-clue>
 
+            <section>
             <h2>Waagerecht</h2>
             <kw-clue light-start="1" light-type="across">
                 MUFFELIG
@@ -318,7 +316,8 @@
             <kw-clue light-start="28" light-type="across">
                 Sie erblüht früh und mag ferner keine Lüge
             </kw-clue>
-
+            </section>
+            <section>
             <h2>Senkrecht</h2>
             <kw-clue light-start="1" light-type="down">
                 Wunder mich andernfalls über kopflosen Fehler
@@ -368,6 +367,7 @@
             <kw-clue light-start="24" light-type="down">
                 Aufbewahrung für Kleidungsstück [-H + D]
             </kw-clue>
+            </section>
         </kw-crossword>
 
 		<kw-crossword id=minigma2>
@@ -560,7 +560,7 @@
 				</kw-clue>
 			</section>
 		</kw-crossword>
-        <kw-crossword>
+        <kw-crossword id="alter-schwede">
             <h1>Alter Schwede</h1>            
             <kw-grid class="swedish">
                 <kw-row>
@@ -791,5 +791,6 @@
                 </kw-row>
             </kw-grid>
         </kw-crossword>
+        </main>
     </body>
 </html>

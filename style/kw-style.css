@@ -208,7 +208,7 @@ kw-grid.swedish kw-clue {
     z-index: 1;
 }
 
-kw-grid.swedish kw-clue::part(light-preview) {
+kw-grid.swedish kw-clue::part(light-contents) {
     display: none;
 }
 
@@ -220,7 +220,7 @@ kw-clue {
     overflow-y: visible;
 }
 
-kw-clue::part(light-preview) {
+kw-clue::part(light-contents) {
     float: right;
 }
 
@@ -315,16 +315,16 @@ kw-ref {
     color: #338;
 }
 
-kw-ref::part(ref-contents) {
+kw-ref::part(light-contents) {
     font-family: sans-serif;
     font-size: 14px;
 }
 
-kw-ref::part(ref-contents)::before {
+kw-ref::part(light-contents)::before {
     content: " \261e\00a0";
     content: " ";
 }
 
-kw-ref::part(ref-contents)::after {
+kw-ref::part(light-contents)::after {
     content: "";
 }
